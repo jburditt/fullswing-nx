@@ -1,0 +1,21 @@
+{
+  "name": "@fullswing/content-model",
+  "version": "1.0.0",
+  "description": "Shared content metadata types and validation for fullswing-blog and fullswing-cms",
+  "type": "module",
+  "private": true,
+  "main": ".build/src/index.js",
+  "types": ".build/src/index.d.ts",
+  "scripts": {
+    "clean": "node -e \"const fs=require(\\\"node:fs\\\");fs.rmSync(\\\".build\\\",{recursive:true,force:true});\"",
+    "compile": "tsc -p tsconfig.json",
+    "test": "npm run clean && npm run compile && node --test .build/test/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.19",
+    "typescript": "5.9.3"
+  }
+}

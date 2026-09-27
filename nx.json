@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "targetDefaults": {
+    "compile": {
+      "outputs": [
+        "{projectRoot}/.build"
+      ],
+      "cache": true
+    },
+    "build": {
+      "outputs": [
+        "{projectRoot}/.build",
+        "{projectRoot}/dist"
+      ],
+      "cache": true
+    },
+    "build:once": {
+      "outputs": [
+        "{projectRoot}/.build",
+        "{projectRoot}/dist"
+      ],
+      "cache": true
+    },
+    "verify": {
+      "outputs": [
+        "{projectRoot}/.build",
+        "{projectRoot}/dist"
+      ],
+      "cache": true
+    },
+    "test": {
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    }
+  },
+  "analytics": false
+}

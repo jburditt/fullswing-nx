@@ -25,7 +25,7 @@ param sku string = 'Free'
 
 @description('Tags applied to all resources, useful for cost tracking across deploy/destroy cycles.')
 param tags object = {
-  project: 'typescript-blog'
+  project: 'fullswing-blog'
 }
 
 resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {

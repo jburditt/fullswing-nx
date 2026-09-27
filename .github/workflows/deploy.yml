@@ -23,9 +23,9 @@ jobs:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_ENV_NAME: typescript-blog
+      AZURE_ENV_NAME: fullswing-blog
       AZURE_LOCATION: westus2
-      AZURE_RESOURCE_GROUP: rg-typescript-blog
+      AZURE_RESOURCE_GROUP: rg-fullswing-blog
     steps:
       - uses: actions/checkout@v4
 

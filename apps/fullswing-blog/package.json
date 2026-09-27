@@ -1,0 +1,35 @@
+{
+  "name": "fullswing-blog",
+  "version": "1.0.0",
+  "description": "Standalone TypeScript static site generator for fullswing blog content",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run clean && npm run compile && node --test .build/test/**/*.test.js",
+    "clean": "node -e \"const fs=require(\\\"node:fs\\\");fs.rmSync(\\\"dist\\\",{recursive:true,force:true});fs.rmSync(\\\".build\\\",{recursive:true,force:true});\"",
+    "compile": "tsc -p tsconfig.json",
+    "build": "npm run clean && npm run compile && node .build/src/build.js",
+    "verify": "npm run test && npm run build",
+    "build:once": "npm run compile && node .build/src/build.js",
+    "serve": "node .build/src/serve.js",
+    "preview": "npm run build && npm run serve",
+    "start": "npm run build && node scripts/watch.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "marked": "16.4.0",
+    "prismjs": "1.30.0",
+    "@fullswing/content-model": "*"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.19",
+    "typescript": "5.9.3"
+  },
+  "nx": {}
+}

@@ -1,0 +1,22 @@
+{
+  "name": "fullswing-cms",
+  "version": "0.1.0",
+  "description": "CMS for managing fullswing-blog content: enhanced markdown, HTML, and Svelte web component pages, with OneDrive integration",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "clean": "node -e \"const fs=require(\\\"node:fs\\\");fs.rmSync(\\\".build\\\",{recursive:true,force:true});\"",
+    "compile": "tsc -p tsconfig.json",
+    "test": "npm run clean && npm run compile && node --test .build/test/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "@fullswing/content-model": "*"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.19",
+    "typescript": "5.9.3"
+  }
+}

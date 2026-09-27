@@ -1,17 +1,8 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "rootDir": ".",
-    "outDir": ".build",
-    "strict": true,
-    "noEmitOnError": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "rootDir": "test",
+    "outDir": ".build-infra"
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "test/**/*.ts"]
+  "include": ["test/**/*.ts"]
 }

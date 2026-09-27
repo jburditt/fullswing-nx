@@ -1,6 +1,10 @@
-# TypeScript Blog
+# Fullswing Workspace
 
-`projects/typescript-blog` is a standalone Node.js + TypeScript static-site generator that mirrors the functional behavior of `projects/fullswing-blog` without depending on the Angular CLI.
+An npm workspaces + Nx monorepo containing:
+
+- `apps/fullswing-blog` — a standalone Node.js + TypeScript static-site generator (no Angular CLI dependency).
+- `apps/fullswing-cms` — a CMS skeleton for managing enhanced markdown/HTML/Svelte pages with OneDrive integration (scaffold only so far).
+- `libs/content-model` — shared `@fullswing/content-model` content metadata types and validation, consumed by both apps.
 
 ## Install
 
@@ -13,35 +17,35 @@ npm install
 ## Build
 
 ```bash
-npm run build
+npm --workspace=fullswing-blog run build
 ```
 
-The build compiles the generator to `.build/`, discovers content, validates metadata, copies non-content assets, and writes static HTML into `projects/typescript-blog/dist/`.
+The build compiles the generator to `apps/fullswing-blog/.build/`, discovers content, validates metadata, copies non-content assets, and writes static HTML into `apps/fullswing-blog/dist/`.
 
 ## Verify in CI
 
 ```bash
-npm run verify
+npm --workspace=fullswing-blog run verify
 ```
 
-`verify` runs the focused test suite and then performs a full static build.
+`verify` runs the focused test suite and then performs a full static build. Prefer `nx run fullswing-blog:verify` / `nx run-many -t compile,test,build` so Nx caching applies.
 
 ## Local preview
 
 ```bash
-npm run preview
+npm --workspace=fullswing-blog run preview
 ```
 
-Opening `dist/index.html` directly via `file://` shows a raw directory listing for friendly URLs like `/blog/<id>/`, because browsers don't resolve `index.html` for directories without a server. `preview` builds the site and serves `dist/` over HTTP on `http://localhost:5173/` (override with the `PORT` env var), resolving friendly URLs to their `index.html` without redirecting. Use `npm run serve` to serve an existing `dist/` without rebuilding.
+Opening `dist/index.html` directly via `file://` shows a raw directory listing for friendly URLs like `/blog/<id>/`, because browsers don't resolve `index.html` for directories without a server. `preview` builds the site and serves `dist/` over HTTP on `http://localhost:5173/` (override with the `PORT` env var), resolving friendly URLs to their `index.html` without redirecting. Use `npm --workspace=fullswing-blog run serve` to serve an existing `dist/` without rebuilding.
 
-Run `npm start` to build and serve the site while watching `src/` and `public/`. After each successful rebuild, open preview tabs refresh automatically at `http://localhost:5173/` (override with the `PORT` env var).
+Run `npm --workspace=fullswing-blog run start` to build and serve the site while watching `src/` and `public/`. After each successful rebuild, open preview tabs refresh automatically at `http://localhost:5173/` (override with the `PORT` env var).
 
 ## Azure deployment
 
-The `azd` project is pinned to the Azure resource group `rg-typescript-blog`.
+The `azd` project (`azure.yaml`, service `web`) deploys only `apps/fullswing-blog` and is pinned to the Azure resource group `rg-fullswing-blog`.
 
 - `azd up` reuses that resource group when it already exists and creates it first when it does not.
-- `azd down` tears down the application resources and then deletes `rg-typescript-blog`.
+- `azd down` tears down the application resources and then deletes `rg-fullswing-blog`.
 - `.github/workflows/deploy.yml` applies the same lifecycle non-interactively for CI deploy and destroy runs.
 
 ## Output structure
@@ -109,7 +113,7 @@ The sidecar JSON must use route `/page/<basename>`.
 ## Limitations
 
 - Mermaid is loaded from a pinned CDN URL rather than bundled into the generator. If the runtime is unavailable, the generated HTML remains readable source. Hosts control any alternate loading, configuration, security policy, and CSP. Authors should add Mermaid `accTitle` and `accDescr` entries when a diagram conveys important information.
-- Syntax highlighting supports the Prism languages imported in `src/lib/markdown.ts`. Additional languages can be added there if needed.
+- Syntax highlighting supports the Prism languages imported in `apps/fullswing-blog/src/lib/markdown.ts`. Additional languages can be added there if needed.
 - Remote code sources are retrieved during the build from approved HTTPS hosts, rendered into the static page, and exposed with a source link. Unavailable, unsafe, non-text, or oversized sources fail the build rather than producing an incomplete block.
 
 ## Azure Deployments
@@ -141,6 +145,7 @@ The sidecar JSON must use route `/page/<basename>`.
 
 ## To-Do
 
+- Determine if assets should be copied to dist but instead should be pre-rendered static html e.g. assets.js should not be needed and markdowns should be pre-rendered to html
 - Implement pages e.g. angular-blog.html and azure-static-app.html OR use the existing pageRenderers
 - Handle cases where blog filenames are the same in different year folders
 - Remove route from blog.json files
@@ -163,6 +168,8 @@ The sidecar JSON must use route `/page/<basename>`.
 - Github action syncs OneDrive folder for content
 - Create npm package for rendering enhanced markdowns
 - Update angular-blog readme and reference this repository
+- Add blog comments
+- Run AI performance check, verify everything is static html, minimize typescript, and cache/bundle
 
 ## Roadmap
 

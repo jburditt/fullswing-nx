@@ -1,8 +1,8 @@
-name: typescript-blog
+name: fullswing-blog
 metadata:
   template: static-web-app@0.1.0
 
-resourceGroup: rg-typescript-blog
+resourceGroup: rg-fullswing-blog
 
 infra:
   provider: bicep
@@ -18,7 +18,7 @@ hooks:
 
 services:
   web:
-    project: .
+    project: ./apps/fullswing-blog
     language: js
     host: staticwebapp
     dist: dist

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly EXPECTED_RESOURCE_GROUP="rg-typescript-blog"
+readonly EXPECTED_RESOURCE_GROUP="rg-fullswing-blog"
 resource_group="${AZURE_RESOURCE_GROUP:-$EXPECTED_RESOURCE_GROUP}"
 location="${AZURE_LOCATION:-}"
 

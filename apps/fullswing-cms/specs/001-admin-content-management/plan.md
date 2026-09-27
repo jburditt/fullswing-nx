@@ -6,15 +6,15 @@
 
 ## Summary
 
-Build the CMS as a server-rendered Node.js application whose use cases depend on a CMS-owned content-storage port. Register OneDrive as the only production provider in this feature, using Microsoft Graph behind that port. Provider configuration is validated before becoming active; switching sources does not copy or change content in the previous source. Reuse shared Fullswing metadata validation and a shared Markdown renderer, while keeping provider adapters, authentication, and CMS workflows in the CMS app.
+Build the CMS as a server-rendered Node.js application whose use cases depend on a CMS-owned content-storage port. Register OneDrive as the only production provider in this feature, using Microsoft Graph behind that port. Provider configuration is validated before becoming active; switching sources does not copy or change content in the previous source. Reuse shared Fullswing metadata validation and a shared Markdown renderer. Provide an authenticated administrator action to dispatch the saved GitHub workflow target, reporting dispatch acceptance separately from workflow completion.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.9, Node.js >=20.19, NodeNext ESM
 
-**Primary Dependencies**: `@fullswing/content-model`; planned Fastify HTTP host; `@azure/msal-node` for Microsoft Entra authentication; Microsoft Graph JavaScript SDK inside the OneDrive adapter; `marked` and Prism in the shared Markdown renderer; an HTML sanitizer at the CMS preview boundary
+**Primary Dependencies**: `@fullswing/content-model`; planned Fastify HTTP host; `@azure/msal-node` for Microsoft Entra authentication; Microsoft Graph JavaScript SDK inside the OneDrive adapter; `@octokit/rest` inside the GitHub workflow adapter; `marked` and Prism in the shared Markdown renderer; `sanitize-html` at the CMS preview boundary
 
-**Storage**: OneDrive folder via Microsoft Graph is the initial authoritative content store. CMS-owned provider configuration and auth-session/token caches use a separate server-side configuration/session boundary; deployment backing services are not selected by this feature.
+**Storage**: OneDrive folder via Microsoft Graph is the initial authoritative content store. Non-secret provider/workflow settings use a persistent server-side `ConfigurationStore`; Entra, Graph, and GitHub credentials use a server-side `SecretStore`. Production store implementations are supplied by deployment composition and must never return secret values to browser code.
 
 **Testing**: TypeScript compile plus native `node:test` through Nx; CMS service tests, storage-provider contract tests, mocked Graph integration tests, and Entra/session tests with test doubles
 
@@ -28,17 +28,21 @@ Build the CMS as a server-rendered Node.js application whose use cases depend on
 
 **Scale/Scope**: One Fullswing content collection and one selected provider per deployment. OneDrive is the only shipped provider. No content-count or concurrent-user target is specified.
 
+**Identity/Storage Access**: Microsoft Entra ID authenticates each administrator; OneDrive operations use that signed-in administrator's delegated permissions. Every allowlisted administrator must have permission to the configured folder; app-only fallback is prohibited.
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 - **I. Content Contract Compatibility**: PASS. Keep Markdown and JSON sidecars as a logical blog pair and use shared metadata validation. Introduce a pure JSON parser in `@fullswing/content-model`; retain `loadMetadata()` as the static blog filesystem wrapper.
-- **II. Secure Administration by Default**: PASS. Entra authentication, allowlist checks, server-side session/token cache, CSRF protection on writes, and secret redaction are cross-cutting gates.
+- **II. Secure Administration by Default**: PASS. Entra authentication, allowlist checks, server-side session/token cache, delegated OneDrive access, CSRF protection on writes and dispatch, a repository-scoped GitHub credential, and secret redaction are cross-cutting gates.
 - **III. OneDrive Is the Content Authority**: PASS FOR THIS RELEASE. OneDrive is the only registered production provider. The abstraction does not make Google Drive, local files, or databases supported in this feature. Enabling a future non-OneDrive provider requires a constitution review because it changes Principle III's authority statement.
 - **IV. Isolated, Testable Integrations**: PASS. Authentication and provider operations are behind typed ports; fake providers and mocked Graph responses cover success, validation, auth, conflict, and provider failure.
 - **V. Accessible, Progressive Authoring Experience**: PASS. Core forms and status feedback work without Svelte web components; Markdown preview is sanitized before display and remains keyboard accessible.
 - **Implementation Constraints**: PASS. Keep CMS-only code in `apps/fullswing-cms`, and place only behavior genuinely shared with the static blog in root libraries.
 - **Development Workflow**: PASS. Planning precedes implementation; add focused tests and run CMS compile/test Nx targets.
+
+**Post-design gate recheck**: PASS. The provider port remains CMS-local, OneDrive remains the only production content authority in this feature, every provider/auth integration stays behind testable boundaries, delegated folder access is explicit, and the preview has a sanitization boundary. No constitution amendment or complexity exception is required for this release.
 
 ## Project Structure
 
@@ -60,11 +64,13 @@ apps/fullswing-cms/specs/001-admin-content-management/
 apps/fullswing-cms/
 ├── src/
 │   ├── auth/                 # Entra login, callback, allowlist, sessions
-│   ├── config/               # Provider selection and app settings
+│   ├── config/               # Provider/workflow settings and persistence ports
 │   ├── content/
 │   │   ├── application/      # Dashboard, validation, and authoring use cases
 │   │   ├── domain/           # CMS normalized records and errors
 │   │   └── storage/          # Port, provider registry, OneDrive adapter
+│   ├── integrations/
+│   │   └── github/           # Workflow-dispatch port and Octokit adapter
 │   ├── server/               # Fastify routes and request guards
 │   ├── views/                # Server-rendered pages and forms
 │   ├── assets/               # Progressive-enhancement client assets
@@ -82,7 +88,7 @@ libs/markdown-renderer/src/
 └── ...                       # Extracted shared Marked/Prism rendering behavior
 ```
 
-**Structure Decision**: Keep request handling, auth, configuration, use cases, and every storage adapter inside the CMS application. Add the provider port at `apps/fullswing-cms/src/content/storage`; route and application services receive a provider instance through startup composition and never import OneDrive or Graph types. Extract metadata parsing and Markdown rendering into their existing/new shared library boundaries because both apps consume those behaviors. `@fullswing/content-model`'s current `ContentRepository` remains a normalized in-memory read model, not a persistence adapter: its `BlogEntry` and `PageEntry` shapes contain publisher filesystem/module paths and must not become the CMS storage interface.
+**Structure Decision**: Keep request handling, auth, configuration, use cases, and every storage adapter inside the CMS application. Add the provider port at `apps/fullswing-cms/src/content/storage`; route and application services receive a provider instance through startup composition and never import OneDrive or Graph types. Put GitHub REST calls behind a CMS-local dispatch port, and keep configured target/secret loading in server-only configuration and secret stores. Extract metadata parsing and Markdown rendering into their existing/new shared library boundaries because both apps consume those behaviors. `@fullswing/content-model`'s current `ContentRepository` remains a normalized in-memory read model, not a persistence adapter: its `BlogEntry` and `PageEntry` shapes contain publisher filesystem/module paths and must not become the CMS storage interface.
 
 ## Complexity Tracking
 

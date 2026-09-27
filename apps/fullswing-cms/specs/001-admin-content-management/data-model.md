@@ -37,8 +37,9 @@ The application has exactly one active provider configuration per deployment.
 |---|---|---|
 | `providerType` | string discriminator | `onedrive` is the only production value registered by this feature. |
 | `providerSettings` | provider-specific object | OneDrive uses non-secret drive/folder identifiers; values are validated before activation. |
+| `githubTarget` | owner, repository, workflow ID/file, ref, optional inputs | Persisted non-secret dispatch target; individual trigger requests cannot override it. |
 | `revision` | monotonically changed opaque value | Included in editor submissions so a provider switch invalidates forms opened against the previous source. |
-| `credentialReference` | secret-store reference | Optional reference only; actual Entra credentials and token-cache material remain outside browser-visible configuration. |
+| `secretReferences` | secret-store references | Entra credentials, token-cache material, and repository-scoped GitHub token remain server-side and are never returned to the browser. |
 
 Provider selection transition: `active A` -> validate candidate B -> if valid, activate B and leave A untouched; if invalid, keep A active and report configuration failure. No import, merge, copy, or migration occurs.
 
@@ -47,6 +48,12 @@ Provider selection transition: `active A` -> validate candidate B -> if valid, a
 - **Administrator identity**: Entra tenant ID and immutable object ID, checked against the externally provisioned allowlist after authentication. Email address is display/contact data only, not the authorization key.
 - **Authenticated session**: server-side session ID, administrator identity, issued/expiry times, CSRF token, provider configuration revision, and MSAL cache reference. Cookies contain only an opaque session identifier or protected minimal session data; Graph access/refresh tokens are not sent to browser scripts.
 - **Session lifecycle**: anonymous -> authenticated after successful state-checked Entra callback and allowlist approval -> expired or logged out; expired/logged-out requests to protected routes return to Login.
+
+## Workflow Dispatch
+
+- **Dispatch request**: an allowlisted administrator's CSRF-protected request to invoke the workflow target stored in integration configuration. Inputs are limited to configured non-secret values.
+- **Dispatch result**: `Accepted` with GitHub run ID/URL when returned, or `Rejected` with a non-sensitive reason. `Accepted` means GitHub accepted the dispatch request, not that workflow jobs or deployment completed.
+- **Credential**: repository-scoped fine-grained GitHub token with Actions write permission, referenced through the server-side `SecretStore`; only replacement is allowed in the UI, never reveal/readback.
 
 ## Authoring State
 

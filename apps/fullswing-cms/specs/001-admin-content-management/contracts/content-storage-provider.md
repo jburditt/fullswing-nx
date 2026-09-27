@@ -30,6 +30,7 @@ Exact TypeScript signatures belong in the implementation. Provider APIs and erro
 ## OneDrive Adapter Mapping
 
 - Enumerate the configured drive/folder recursively via Microsoft Graph v1.0 and follow continuation links.
+- Make Graph requests using delegated access for the currently signed-in administrator. The administrator must already have access to the configured folder; permission failure is explicit, and app-only access is not a fallback.
 - Resolve provider item IDs and eTags inside the adapter. Return opaque CMS IDs/version tokens.
 - Preserve the Fullswing Markdown/JSON sidecar convention in the OneDrive folder while treating the pair as one logical blog.
 - Use conditional writes where supported and map Graph precondition failures to `VersionConflict`.

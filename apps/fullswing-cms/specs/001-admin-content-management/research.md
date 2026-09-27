@@ -39,13 +39,21 @@
 
 ### Microsoft Entra and OneDrive access
 
-**Decision**: Use the Microsoft Entra authorization-code web-app flow through the supported MSAL Node library. Request delegated Microsoft Graph access for the signed-in administrator, check the configured allowlist using the immutable `(tenantId, objectId)` identity pair, and keep the MSAL cache and session data server-side. Configure the OneDrive `driveId` and root `folderId` separately from deployment-owned Entra credentials. A user who is allowlisted but lacks access to the configured folder receives a non-sensitive integration error.
+**Decision**: Use the Microsoft Entra authorization-code web-app flow through the supported MSAL Node library. Request the delegated Microsoft Graph `Files.ReadWrite` permission needed for folder listing and content writes, check the configured allowlist using the immutable `(tenantId, objectId)` identity pair, and keep the MSAL cache and session data server-side. Do not request application-level file permissions. Configure the OneDrive `driveId` and root `folderId` separately from deployment-owned Entra credentials. A user who is allowlisted but lacks access to the configured folder receives a non-sensitive integration error.
 
-**Rationale**: The auth-code flow is intended for server-based web apps and lets Graph operations run within the administrator's existing drive access rather than granting an app broad tenant-wide file access by default. Microsoft recommends supported authentication libraries instead of hand-crafting protocol requests. The app must still validate `state`, use the library's OIDC protections, protect CSRF-sensitive writes, and never expose tokens.
+**Rationale**: The auth-code flow is intended for server-based web apps and lets Graph operations run within the signed-in administrator's existing drive access rather than granting an app independent tenant-wide file access. Every allowlisted administrator must have permission to the configured folder; there is no app-only fallback. Microsoft recommends supported authentication libraries instead of hand-crafting protocol requests. The app must still validate `state`, use the library's OIDC protections, protect CSRF-sensitive writes, and never expose tokens.
 
-**Alternatives considered**: App-only Graph permissions (not selected because the listed application permissions for upload grant broader file access and require tenant administrator consent); browser-held Graph tokens (rejected because the app is server-rendered and tokens must remain server-side); raw OAuth HTTP requests (rejected in favor of MSAL).
+**Alternatives considered**: App-only Graph permissions (not selected because file permissions operate independently of the signed-in administrator and require tenant authorization); browser-held Graph tokens (rejected because the app is server-rendered and tokens must remain server-side); raw OAuth HTTP requests (rejected in favor of MSAL).
 
 **Operational constraint**: A production session/token-cache store must be supplied by the deployment. This feature defines an injectable server-side store and test fake; it does not select a hosting platform or add deployment infrastructure.
+
+### GitHub workflow dispatch
+
+**Decision**: Add a CMS-local GitHub workflow-dispatch port with an `@octokit/rest` adapter. Configuration identifies one repository owner/name, workflow ID or file name, ref, optional non-secret workflow inputs, and a server-side credential reference. Use a fine-grained personal access token limited to the target repository with Actions write permission. Store the token through the deployment-provided `SecretStore`; the browser can replace a token but can never read it back. Trigger only the saved target, require the workflow to declare `workflow_dispatch`, and show accepted dispatch (including run ID/URL where GitHub returns it) separately from workflow completion.
+
+**Rationale**: GitHub's REST endpoint accepts the repository, workflow, ref, and configured inputs and requires a `workflow_dispatch` trigger. Fine-grained tokens have a repository Actions write permission for this endpoint, avoiding classic `repo` scope. Keeping the API client behind an adapter makes authorization, rate limits, and error handling independently testable.
+
+**Alternatives considered**: External caller only (rejected by clarification); generic administrator-supplied URL/target per request (rejected because a trigger must not become an arbitrary repository/workflow proxy); broad classic `repo` token (rejected in favor of one-repository Actions write permission); monitoring runs until completion (out of scope and unnecessary to confirm dispatch acceptance).
 
 ### Graph traversal, versions, and paired writes
 
@@ -73,3 +81,5 @@
 - [Microsoft Graph upload small files](https://learn.microsoft.com/en-us/graph/api/driveitem-put-content?view=graph-rest-1.0): file content upload/replace endpoints and permission guidance.
 - [Microsoft Graph update a file or folder](https://learn.microsoft.com/en-us/graph/api/driveitem-update?view=graph-rest-1.0): `if-match` eTag precondition and `412 Precondition Failed` behavior.
 - [Microsoft Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference): compare delegated and application file permissions; request least privilege.
+- [GitHub REST API: Create a workflow dispatch event](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event): repository/workflow/ref/inputs, `workflow_dispatch` prerequisite, and dispatch response.
+- [GitHub fine-grained token permission reference](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens): repository Actions write permission for workflow dispatch.

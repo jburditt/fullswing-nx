@@ -15,6 +15,7 @@
 - Q: When an administrator changes the selected storage provider, what should happen to content in the previous provider? → A: The new provider becomes authoritative; the previous provider is left unchanged, and migration is separate.
 - Q: Which identity provider should administrators use to sign in to the CMS for its first release? → A: Microsoft Entra ID.
 - Q: Should the CMS access OneDrive as the signed-in administrator using their file permissions, or as a separate app identity with tenant-granted file permissions? → A: Use the signed-in administrator's delegated access; each allowlisted administrator must have access to the configured folder.
+- Q: Should the CMS itself trigger the configured GitHub Action, or only store settings for an external caller? → A: An authenticated administrator can trigger the configured workflow through the CMS.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -83,13 +84,13 @@ An administrator reads and saves blog and page content through the configured co
 7. **Given** an administrator changes the selected provider, **When** the configuration is saved, **Then** the new provider becomes the active content source, the previous provider's content remains unchanged, and no automatic migration occurs.
 8. **Given** an allowlisted administrator does not have access to the configured OneDrive folder, **When** they load or save content, **Then** the CMS reports an access error and does not present the operation as successful.
 
-### User Story 5 - Configure Integrations (Priority: P2)
+### User Story 5 - Configure Integrations and Dispatch Workflow (Priority: P2)
 
-An administrator reviews and updates the configuration values required for the OneDrive connection and GitHub Action invocation.
+An administrator reviews and updates OneDrive and GitHub Action settings, then can request the configured workflow to run from the CMS.
 
-**Why this priority**: Integration settings enable content access and the existing deployment workflow while keeping credentials under administrative control.
+**Why this priority**: Integration settings enable content access and the publishing workflow while keeping credentials under administrative control.
 
-**Independent Test**: As an administrator, save valid and incomplete configuration, revisit the page, and verify values, validation, and secret masking; confirm a non-administrator cannot access the page.
+**Independent Test**: As an administrator, save valid and incomplete configuration, revisit the page, and verify values, validation, and secret masking; trigger a test workflow and verify queued and failure states; confirm a non-administrator cannot access settings or dispatch.
 
 **Acceptance Scenarios**:
 
@@ -97,6 +98,8 @@ An administrator reviews and updates the configuration values required for the O
 2. **Given** the administrator enters valid configuration for a supported service, **When** they save it, **Then** the CMS confirms the configuration was stored and available non-secret values can be reviewed later.
 3. **Given** a saved value is secret, **When** the configuration page is revisited, **Then** the secret is masked and is not disclosed in page content or application logs.
 4. **Given** required configuration is incomplete or invalid, **When** the administrator saves it, **Then** the CMS identifies the affected values and does not claim the integration is ready.
+5. **Given** valid GitHub workflow settings are configured, **When** an administrator triggers the workflow, **Then** the CMS sends an authorized dispatch request and reports whether GitHub accepted or rejected it without claiming that an accepted workflow has completed.
+6. **Given** GitHub settings are incomplete, the administrator is unauthorized, or GitHub rejects or throttles the request, **When** the administrator attempts to trigger the workflow, **Then** the CMS reports a non-sensitive failure and does not display a queued or successful state.
 
 ### User Story 6 - Reach the HTML Page Placeholder (Priority: P3)
 
@@ -125,6 +128,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - Markdown contains raw HTML, scripts, or event handlers; the preview does not execute active content.
 - A dashboard filter produces no matches or the underlying folder contains no entries; the page shows an empty state rather than an error.
 - A secret has not been configured, is rejected by an integration, or is replaced; the UI and logs do not disclose its value.
+- The GitHub credential is invalid or revoked, the configured workflow cannot be dispatched, or GitHub throttles or rejects a request; the CMS reports dispatch failure and does not claim deployment completion.
 - An HTML page is selected for editing before that capability is implemented; the CMS leaves it read-only and shows the placeholder.
 
 ## Requirements *(mandatory)*
@@ -150,6 +154,8 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **FR-017**: A content-storage provider or identity-provider failure MUST produce an explicit, non-sensitive error and MUST NOT be represented as a successful operation.
 - **FR-018**: Provider-specific storage behavior MUST be isolated from dashboard, filtering, authoring, validation, and preview workflows behind a common content-storage contract. Adding a provider that satisfies this contract MUST NOT require rewriting those workflows.
 - **FR-019**: OneDrive operations MUST use delegated access for the currently signed-in administrator. Each allowlisted administrator MUST have access to the configured folder; missing folder access MUST be reported without falling back to an independent app identity.
+- **FR-020**: The CMS MUST provide an authenticated, CSRF-protected action for an administrator to dispatch the configured GitHub workflow. It MUST report dispatch acceptance separately from workflow completion, and MUST report invalid configuration, authorization failures, and GitHub API failures without exposing credentials or claiming a successful dispatch.
+- **FR-021**: GitHub workflow configuration MUST identify the repository owner and name, workflow identifier, reference to run, and any configured non-secret workflow inputs. Dispatch MUST use only these saved settings and MUST NOT accept a repository or workflow target override from an individual trigger request.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -157,6 +163,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **Page Entry**: An HTML page item surfaced in the dashboard; HTML authoring and execution are deferred in this release.
 - **Content Storage Provider**: A configured service that reads and writes content using the CMS content-storage contract; OneDrive is the initial supported provider.
 - **Administrator**: An authenticated identity that is authorized by the configured administrator allowlist.
+- **Workflow Dispatch Request**: An administrator's request to invoke the configured GitHub workflow, with a result that distinguishes dispatch acceptance or failure from later workflow completion.
 - **Integration Configuration**: The selected content-storage provider and its settings, together with the values needed to configure GitHub Action invocation; secrets are protected and masked.
 - **Edit Version**: The version of an item an administrator loaded, used to detect whether the stored item changed before a save.
 
@@ -173,16 +180,19 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **SC-007**: Saved secret values remain undisclosed in the revisited configuration page, browser-visible page content, and application logs.
 - **SC-008**: Administrators can reach the HTML page placeholder, and the placeholder provides no means to modify or execute HTML content.
 - **SC-009**: A test content-storage provider that satisfies the common contract can be selected and used for dashboard reads and content saves without changing CMS dashboard or authoring workflows.
+- **SC-010**: 100% of OneDrive reads and writes use the signed-in administrator's delegated access; if that administrator lacks configured-folder access, the operation fails explicitly without app-only fallback or a success state.
+- **SC-011**: 100% of GitHub workflow trigger attempts with valid settings return an explicit accepted or failed dispatch state; no accepted dispatch is reported as a completed deployment, and invalid settings or unauthorized requests never produce a queued state.
+- **SC-012**: 100% of accepted workflow dispatches target the saved repository, workflow, reference, and inputs; no trigger request can override the configured target.
 
 ## Assumptions
 
 - Administrators are provisioned in an allowlist managed outside the CMS; the Configuration page does not manage administrator membership.
 - Microsoft Entra ID is the identity provider for the first release; the Entra ID tenant registration and credentials are supplied by the deployment environment.
-- OneDrive Graph access is delegated to the signed-in administrator; every allowlisted administrator is expected to have permission to the configured folder.
+- OneDrive access uses the signed-in administrator's permissions; every allowlisted administrator is expected to have permission to the configured folder.
 - Existing blog content uses matched Markdown and JSON metadata files, with the required fields defined by the Fullswing content contract.
 - OneDrive is the initial supported content-storage provider and is authoritative when selected. Future providers such as Google Drive, local files, or a database are not delivered by this feature; each can be added by implementing the common content-storage contract and providing its configuration, without rewriting CMS workflows.
 - Changing the selected provider changes the authoritative content source only; content migration, copying, and synchronization between providers are separate features.
-- The Configuration page manages integration settings but does not itself trigger a GitHub Action run; action execution remains with the existing external workflow/API caller.
+- The CMS sends GitHub workflow dispatch requests; GitHub runs the workflow asynchronously, and observing workflow completion is outside this feature.
 - HTML page records can be identified in the dashboard, but HTML authoring, preview, saving, and Svelte execution are intentionally deferred.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.
 - Optional Svelte enhancements may be added later but are not required for the core administration workflows in this release.

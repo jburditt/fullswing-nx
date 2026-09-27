@@ -31,8 +31,4 @@
 
 ## Notes
 
-- OAuth and OneDrive are retained as explicit stakeholder constraints, not as a choice of programming language or framework.
-- Content storage is provider-neutral; OneDrive is the only provider promised by this feature, while future providers must satisfy the shared storage contract without requiring changes to CMS workflows.
-- The shared-content reuse boundary is documented as planning context; moving publisher-specific rendering or static-site behavior into a shared library is not part of this feature.
-- Configuration covers values required by an external GitHub Action invocation; triggering that action is out of scope for this feature.
-- Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
+ Configuration includes the target repository, workflow, reference, optional inputs, and a protected credential for CMS-initiated dispatch; workflow completion monitoring is out of scope.

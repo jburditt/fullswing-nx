@@ -14,6 +14,7 @@
 
 - Q: When an administrator changes the selected storage provider, what should happen to content in the previous provider? → A: The new provider becomes authoritative; the previous provider is left unchanged, and migration is separate.
 - Q: Which identity provider should administrators use to sign in to the CMS for its first release? → A: Microsoft Entra ID.
+- Q: Should the CMS access OneDrive as the signed-in administrator using their file permissions, or as a separate app identity with tenant-granted file permissions? → A: Use the signed-in administrator's delegated access; each allowlisted administrator must have access to the configured folder.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -80,6 +81,7 @@ An administrator reads and saves blog and page content through the configured co
 5. **Given** stored content changes after an administrator loaded it, **When** that administrator tries to overwrite it, **Then** the CMS detects the conflict and requires review of the newer content before replacement.
 6. **Given** another service has been added by implementing the content-storage contract, **When** an administrator selects that supported service in configuration, **Then** the dashboard, filtering, editing, validation, and preview workflows operate without provider-specific changes.
 7. **Given** an administrator changes the selected provider, **When** the configuration is saved, **Then** the new provider becomes the active content source, the previous provider's content remains unchanged, and no automatic migration occurs.
+8. **Given** an allowlisted administrator does not have access to the configured OneDrive folder, **When** they load or save content, **Then** the CMS reports an access error and does not present the operation as successful.
 
 ### User Story 5 - Configure Integrations (Priority: P2)
 
@@ -115,6 +117,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - The identity provider is unavailable or returns an authentication failure; the CMS denies protected access and displays a non-sensitive error.
 - The configured administrator allowlist is empty or an account's identity cannot be matched; access is denied by default.
 - The selected content-storage service is unavailable, access is revoked, or content changes during an edit; the CMS reports the condition and does not claim an unsuccessful read or write succeeded.
+- An allowlisted administrator lacks permission to the configured OneDrive folder; OneDrive access fails explicitly and the CMS does not fall back to app-only access.
 - A storage service is not supported or its configuration is incomplete; the CMS does not silently fall back to another service or present content from the wrong source.
 - The selected provider changes while the previous provider contains content; the previous provider remains unchanged, and the CMS does not automatically copy, merge, or migrate its content.
 - A Markdown file has no metadata pair, its metadata is malformed, its route conflicts with another entry, or required metadata is missing; the item is not silently accepted as valid.
@@ -146,6 +149,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **FR-016**: The core administration and authoring workflows MUST remain usable without optional Svelte web components, and validation, status, navigation, and error feedback MUST be accessible by keyboard and assistive technology.
 - **FR-017**: A content-storage provider or identity-provider failure MUST produce an explicit, non-sensitive error and MUST NOT be represented as a successful operation.
 - **FR-018**: Provider-specific storage behavior MUST be isolated from dashboard, filtering, authoring, validation, and preview workflows behind a common content-storage contract. Adding a provider that satisfies this contract MUST NOT require rewriting those workflows.
+- **FR-019**: OneDrive operations MUST use delegated access for the currently signed-in administrator. Each allowlisted administrator MUST have access to the configured folder; missing folder access MUST be reported without falling back to an independent app identity.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -174,6 +178,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 
 - Administrators are provisioned in an allowlist managed outside the CMS; the Configuration page does not manage administrator membership.
 - Microsoft Entra ID is the identity provider for the first release; the Entra ID tenant registration and credentials are supplied by the deployment environment.
+- OneDrive Graph access is delegated to the signed-in administrator; every allowlisted administrator is expected to have permission to the configured folder.
 - Existing blog content uses matched Markdown and JSON metadata files, with the required fields defined by the Fullswing content contract.
 - OneDrive is the initial supported content-storage provider and is authoritative when selected. Future providers such as Google Drive, local files, or a database are not delivered by this feature; each can be added by implementing the common content-storage contract and providing its configuration, without rewriting CMS workflows.
 - Changing the selected provider changes the authoritative content source only; content migration, copying, and synchronization between providers are separate features.

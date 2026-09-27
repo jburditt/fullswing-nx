@@ -8,11 +8,18 @@
 
 **Input**: User description: Create a CMS for managing Fullswing blog Markdown and HTML page content stored in a configured OneDrive folder. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, and configure OneDrive and GitHub Action settings. HTML editing is a placeholder for now.
 
+## Clarifications
+
+### Session 2026-09-26
+
+- Q: When an administrator changes the selected storage provider, what should happen to content in the previous provider? → A: The new provider becomes authoritative; the previous provider is left unchanged, and migration is separate.
+- Q: Which identity provider should administrators use to sign in to the CMS for its first release? → A: Microsoft Entra ID.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Secure Administrator Access (Priority: P1)
 
-An administrator signs in to manage content. A visitor who is not signed in cannot access the dashboard, editor, or configuration pages. Only accounts approved for administration can enter the CMS.
+An administrator signs in with Microsoft Entra ID to manage content. A visitor who is not signed in cannot access the dashboard, editor, or configuration pages. Only accounts approved for administration can enter the CMS.
 
 **Why this priority**: Content and integration settings must not be exposed to unauthenticated or unauthorized visitors.
 
@@ -72,6 +79,7 @@ An administrator reads and saves blog and page content through the configured co
 4. **Given** saving either member of a blog and metadata pair fails, **When** the operation ends, **Then** the CMS does not report success and identifies any inconsistency that needs resolution.
 5. **Given** stored content changes after an administrator loaded it, **When** that administrator tries to overwrite it, **Then** the CMS detects the conflict and requires review of the newer content before replacement.
 6. **Given** another service has been added by implementing the content-storage contract, **When** an administrator selects that supported service in configuration, **Then** the dashboard, filtering, editing, validation, and preview workflows operate without provider-specific changes.
+7. **Given** an administrator changes the selected provider, **When** the configuration is saved, **Then** the new provider becomes the active content source, the previous provider's content remains unchanged, and no automatic migration occurs.
 
 ### User Story 5 - Configure Integrations (Priority: P2)
 
@@ -108,6 +116,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - The configured administrator allowlist is empty or an account's identity cannot be matched; access is denied by default.
 - The selected content-storage service is unavailable, access is revoked, or content changes during an edit; the CMS reports the condition and does not claim an unsuccessful read or write succeeded.
 - A storage service is not supported or its configuration is incomplete; the CMS does not silently fall back to another service or present content from the wrong source.
+- The selected provider changes while the previous provider contains content; the previous provider remains unchanged, and the CMS does not automatically copy, merge, or migrate its content.
 - A Markdown file has no metadata pair, its metadata is malformed, its route conflicts with another entry, or required metadata is missing; the item is not silently accepted as valid.
 - A date is malformed or not a real calendar date, or categories are missing or empty; validation identifies the invalid metadata.
 - Markdown contains raw HTML, scripts, or event handlers; the preview does not execute active content.
@@ -120,7 +129,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 ### Functional Requirements
 
 - **FR-001**: Every page other than Login MUST require an authenticated administrator session.
-- **FR-002**: The CMS MUST use the configured identity provider's currently supported OAuth sign-in flow and MUST authorize only accounts on the configured administrator allowlist.
+- **FR-002**: The CMS MUST use Microsoft Entra ID's currently supported OAuth sign-in flow and MUST authorize only accounts on the configured administrator allowlist.
 - **FR-003**: The CMS MUST provide Logout, end the active session, and require authentication on the next protected-page request.
 - **FR-004**: The shared page layout MUST provide Fullswing branding, navigation to Dashboard, blog/page authoring, and Configuration, and a Logout control. Main page content MUST be horizontally centered.
 - **FR-005**: The Dashboard MUST list available blog and page entries and support filtering by content type, title, date range, author, and category, including combined filters and a clear-filters action.
@@ -131,7 +140,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **FR-010**: The CMS MUST access blog and HTML page content through a provider-neutral content-storage capability; the configured OneDrive folder MUST be the authoritative store when OneDrive is selected.
 - **FR-011**: The CMS MUST report successful saves only after all required content for that save has been stored; failed or partial writes MUST be reported and MUST identify any unresolved content mismatch.
 - **FR-012**: The CMS MUST detect when an item has changed since it was loaded and MUST prevent an unreviewed overwrite of the newer content.
-- **FR-013**: The Configuration page MUST allow administrators to select a supported content-storage provider and manage its required settings, as well as the values needed for GitHub Action invocation; it MUST identify missing or invalid required values.
+- **FR-013**: The Configuration page MUST allow administrators to select a supported content-storage provider and manage its required settings, as well as the values needed for GitHub Action invocation; it MUST identify missing or invalid required values. Saving a provider change MUST make the newly selected provider authoritative without modifying or migrating content in the previous provider.
 - **FR-014**: OAuth credentials, access tokens, refresh tokens, OneDrive secrets, and other secret configuration values MUST NOT be committed, exposed in client-visible page content, or logged. Saved secrets MUST be masked when configuration is revisited.
 - **FR-015**: The CMS MUST provide an HTML page destination that displays a placeholder; HTML editing, saving, and embedded Svelte execution are out of scope for this release.
 - **FR-016**: The core administration and authoring workflows MUST remain usable without optional Svelte web components, and validation, status, navigation, and error feedback MUST be accessible by keyboard and assistive technology.
@@ -164,9 +173,10 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 ## Assumptions
 
 - Administrators are provisioned in an allowlist managed outside the CMS; the Configuration page does not manage administrator membership.
-- The CMS uses the identity provider's current supported OAuth flow; the identity provider and its registration are supplied by the deployment environment.
+- Microsoft Entra ID is the identity provider for the first release; the Entra ID tenant registration and credentials are supplied by the deployment environment.
 - Existing blog content uses matched Markdown and JSON metadata files, with the required fields defined by the Fullswing content contract.
 - OneDrive is the initial supported content-storage provider and is authoritative when selected. Future providers such as Google Drive, local files, or a database are not delivered by this feature; each can be added by implementing the common content-storage contract and providing its configuration, without rewriting CMS workflows.
+- Changing the selected provider changes the authoritative content source only; content migration, copying, and synchronization between providers are separate features.
 - The Configuration page manages integration settings but does not itself trigger a GitHub Action run; action execution remains with the existing external workflow/API caller.
 - HTML page records can be identified in the dashboard, but HTML authoring, preview, saving, and Svelte execution are intentionally deferred.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.

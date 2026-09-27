@@ -51,29 +51,36 @@ export async function loadMetadata(
   expectedRoute: string,
 ): Promise<ParsedMetadata> {
   const source = await readFile(filePath, 'utf8');
+  return parseMetadata(source, expectedRoute, filePath);
+}
 
+export function parseMetadata(
+  source: string,
+  expectedRoute: string,
+  sourceName = 'metadata source',
+): ParsedMetadata {
   let raw: unknown;
   try {
     raw = JSON.parse(source);
   } catch (error) {
-    throw new Error(`Metadata file ${filePath} is not valid JSON: ${(error as Error).message}`);
+    throw new Error(`Metadata file ${sourceName} is not valid JSON: ${(error as Error).message}`);
   }
 
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new Error(`Metadata file ${filePath} must contain a JSON object.`);
+    throw new Error(`Metadata file ${sourceName} must contain a JSON object.`);
   }
 
   const object = raw as Record<string, unknown>;
-  const route = assertString(object.route, 'route', filePath);
-  const title = assertString(object.title, 'title', filePath);
-  const author = assertString(object.author, 'author', filePath);
-  const date = assertString(object.date, 'date', filePath);
-  const categories = assertCategories(object.categories, filePath);
-  const dateValue = parseDate(date, filePath);
+  const route = assertString(object.route, 'route', sourceName);
+  const title = assertString(object.title, 'title', sourceName);
+  const author = assertString(object.author, 'author', sourceName);
+  const date = assertString(object.date, 'date', sourceName);
+  const categories = assertCategories(object.categories, sourceName);
+  const dateValue = parseDate(date, sourceName);
 
   if (route !== expectedRoute) {
     throw new Error(
-      `Metadata file ${filePath} must use route "${expectedRoute}" to match its basename, but found "${route}".`
+      `Metadata file ${sourceName} must use route "${expectedRoute}" to match its basename, but found "${route}".`
     );
   }
 

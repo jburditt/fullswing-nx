@@ -7,16 +7,27 @@
   "scripts": {
     "clean": "node -e \"const fs=require(\\\"node:fs\\\");fs.rmSync(\\\".build\\\",{recursive:true,force:true});\"",
     "compile": "tsc -p tsconfig.json",
-    "test": "npm run clean && npm run compile && node --test .build/test/**/*.test.js"
+    "test": "npm run clean && npm run compile && node --test .build/test/**/*.test.js",
+    "start": "npm run compile && node .build/src/index.js"
   },
   "engines": {
     "node": ">=20.19.0"
   },
   "dependencies": {
-    "@fullswing/content-model": "*"
+    "@azure/msal-node": "7.0.0",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/formbody": "^9.0.0",
+    "@fastify/static": "^10.1.5",
+    "@fullswing/content-model": "*",
+    "@fullswing/markdown-renderer": "^1.0.0",
+    "@microsoft/microsoft-graph-client": "3.0.7",
+    "@octokit/rest": "22.0.1",
+    "fastify": "5.12.5",
+    "sanitize-html": "2.17.7"
   },
   "devDependencies": {
     "@types/node": "20.17.19",
+    "@types/sanitize-html": "2.16.1",
     "typescript": "5.9.3"
   }
 }

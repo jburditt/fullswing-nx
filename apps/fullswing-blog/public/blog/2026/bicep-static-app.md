@@ -35,7 +35,7 @@ output staticWebAppHostname string = staticWebApp.properties.defaultHostname
 **`azure.yaml`** is the `azd` project file. It points at the compiled `dist/` output and runs the project's own build before packaging:
 
 ```yaml
-resourceGroup: rg-typescript-blog
+resourceGroup: rg-fullswing-blog
 
 hooks:
   preprovision:
@@ -60,18 +60,18 @@ services:
 ## One-time setup
 
 1. `azd auth login`
-2. `azd env new typescript-blog`
-3. `azd up` — creates or reuses `rg-typescript-blog`, provisions the Static Web App from `infra/main.bicep`, and deploys the current build
+2. `azd env new fullswing-blog`
+3. `azd up` — creates or reuses `rg-fullswing-blog`, provisions the Static Web App from `infra/main.bicep`, and deploys the current build
 
 ## Everyday workflow
 
-- `azd up` — redeploy after content changes; reuses or recreates `rg-typescript-blog` as needed
-- `azd down --purge` — tear down the app and then delete `rg-typescript-blog` entirely to stop paying for it between updates
+- `azd up` — redeploy after content changes; reuses or recreates `rg-fullswing-blog` as needed
+- `azd down --purge` — tear down the app and then delete `rg-fullswing-blog` entirely to stop paying for it between updates
 - `azd up` again later — same Bicep template, same parameters, a fresh Static Web App with the latest build
 
 ## CI
 
-`azd pipeline config` wires up GitHub OIDC federated credentials automatically, so CI never needs a stored client secret. The workflow ensures `rg-typescript-blog` exists before `azd up`, and on destroy it tears down the app and then deletes that resource group:
+`azd pipeline config` wires up GitHub OIDC federated credentials automatically, so CI never needs a stored client secret. The workflow ensures `rg-fullswing-blog` exists before `azd up`, and on destroy it tears down the app and then deletes that resource group:
 
 ```yaml
 - name: Deploy
@@ -95,7 +95,7 @@ Running `azd pipeline config --provider github` is interactive; here's what it a
 1. **Azure login** — prompts to log in if you aren't already. If your tenant enforces MFA, sign in against the specific tenant first: `azd auth login --tenant-id <tenant>`.
 2. **Environment name** — creates (or reuses) an `azd` environment, e.g. `dev`. This maps to the `AZURE_ENV_NAME` value used by `azd up`/`azd down`.
 3. **Azure subscription and location** — pick the subscription and region the Static Web App (and supporting identity) should live in.
-4. **Resource group** — Use `rg-typescript-blog`. If you use another value, you will need to update the yaml files
+4. **Resource group** — Use `rg-fullswing-blog`. If you use another value, you will need to update the yaml files
 5. **Missing workflow file** — if `.github/workflows/deploy.yml` doesn't exist yet, `azd` offers to generate a starter workflow.
 6. **GitHub CLI login** — if you're not authenticated with `gh`, it walks through a device-code browser login.
 7. **Pipeline auth method** — choose **Federated User Managed Identity (MSI + OIDC)** to avoid storing any client secret. `azd` creates the MSI, assigns it the needed roles, and adds federated credentials scoped to the repo's `main` branch and pull requests.

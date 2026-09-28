@@ -1,6 +1,6 @@
 {
-  "route": "/blog/git-undo",
-  "title": "Undoing Changes in Git",
+  "route": "/blog/git-cheatsheet",
+  "title": "Git Cheatsheet",
   "categories": ["Document"],
   "author": "Jebb Burditt",
   "date": "2025-10-21"

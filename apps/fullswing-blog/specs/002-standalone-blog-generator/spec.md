@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "projects/typescript-blog is a standalone Node.js + TypeScript static-site
+**Input**: User description: "projects/fullswing-blog is a standalone Node.js + TypeScript static-site
 generator that mirrors the functional behavior of projects/fullswing-blog without depending on the
 Angular CLI."
 

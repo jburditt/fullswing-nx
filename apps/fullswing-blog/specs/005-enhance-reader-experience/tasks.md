@@ -180,4 +180,4 @@ build dependency.
 
 ## Phase 7: Convergence
 
-- [X] T031 Align `test/deployment-config.test.ts` with the current pinned `rg-typescript-blog` lifecycle contract in `azure.yaml` and `.github/workflows/deploy.yml`, then make `npm test` pass per Constitution IV (partial)
+- [X] T031 Align `test/deployment-config.test.ts` with the current pinned `rg-fullswing-blog` lifecycle contract in `azure.yaml` and `.github/workflows/deploy.yml`, then make `npm test` pass per Constitution IV (partial)

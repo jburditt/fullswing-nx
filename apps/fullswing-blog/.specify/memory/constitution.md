@@ -39,7 +39,7 @@ Tests execute from `.build/test/`, so a targeted test MUST compile first and run
 JavaScript file. Verification protects the compile-to-build boundary that production uses.
 
 ### V. Guarded Deployment
-Azure lifecycle automation MUST remain pinned to resource group `rg-typescript-blog`.
+Azure lifecycle automation MUST remain pinned to resource group `rg-fullswing-blog`.
 `azure.yaml`, `.github/workflows/deploy.yml`, the resource-group lifecycle scripts, and
 deployment tests MUST remain aligned. Lifecycle scripts MUST refuse a different resource group.
 This prevents deployment or teardown from affecting unintended Azure resources.

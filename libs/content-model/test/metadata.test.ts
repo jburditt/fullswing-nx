@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { loadMetadata } from '../src/metadata.js';
 
 async function writeTempMetadata(content: string): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'typescript-blog-metadata-'));
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-metadata-'));
   const filePath = join(root, 'entry.json');
   await writeFile(filePath, content, 'utf8');
   return filePath;

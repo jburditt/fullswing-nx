@@ -14,7 +14,7 @@ const VALID_METADATA = {
 };
 
 test('discoverBlogs should reject orphan markdown files', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'typescript-blog-discovery-'));
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-discovery-'));
   const blogDirectory = join(root, 'blog');
   await mkdir(blogDirectory, { recursive: true });
   await writeFile(join(blogDirectory, 'example.md'), '# Example\n', 'utf8');
@@ -26,7 +26,7 @@ test('discoverBlogs should reject orphan markdown files', async () => {
 });
 
 test('discoverBlogs should discover posts in year folders', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'typescript-blog-discovery-'));
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-discovery-'));
   const blogDirectory = join(root, 'blog');
   const yearDirectory = join(blogDirectory, '2025');
   await mkdir(yearDirectory, { recursive: true });
@@ -47,7 +47,7 @@ test('discoverBlogs should discover posts in year folders', async () => {
 });
 
 test('discoverBlogs should reject non-ISO dates in metadata', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'typescript-blog-discovery-'));
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-discovery-'));
   const blogDirectory = join(root, 'blog');
   await mkdir(blogDirectory, { recursive: true });
   await writeFile(join(blogDirectory, 'example.md'), '# Example\n', 'utf8');
@@ -64,7 +64,7 @@ test('discoverBlogs should reject non-ISO dates in metadata', async () => {
 });
 
 test('discoverPages should reject orphan renderer files', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'typescript-blog-pages-'));
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-pages-'));
   const sourcePagesDirectory = join(root, 'src', 'pages');
   const compiledPagesDirectory = join(root, '.build', 'src', 'pages');
   await mkdir(sourcePagesDirectory, { recursive: true });
@@ -78,7 +78,7 @@ test('discoverPages should reject orphan renderer files', async () => {
 });
 
 test('discoverPages should ignore declaration files and load matching page metadata', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'typescript-blog-pages-'));
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-pages-'));
   const sourcePagesDirectory = join(root, 'src', 'pages');
   const compiledPagesDirectory = join(root, '.build', 'src', 'pages');
   await mkdir(sourcePagesDirectory, { recursive: true });

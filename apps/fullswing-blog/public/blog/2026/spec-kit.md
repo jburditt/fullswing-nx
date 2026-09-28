@@ -1,1 +1,1 @@
-specify init typescript-blog --integration copilot
+specify init fullswing-blog --integration copilot

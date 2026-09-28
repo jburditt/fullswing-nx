@@ -9,3 +9,8 @@ git add file1, file2, etc
 git commit -m "remove unneeded changes"
 git push
 ```
+
+Prune branches after merging to trunk
+```
+git config --global fetch.prune true
+```

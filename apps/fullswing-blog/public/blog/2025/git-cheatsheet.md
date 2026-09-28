@@ -10,6 +10,12 @@ git commit -m "remove unneeded changes"
 git push
 ```
 
+Configure new Git installation
+```
+git config --global user.name "Jebb Burditt"
+git config --global user.email "jebb.burditt@gmail.com"
+```
+
 Prune branches after merging to trunk
 ```
 git config --global fetch.prune true

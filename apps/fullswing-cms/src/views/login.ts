@@ -14,8 +14,9 @@ export function renderLoginPage(authorizationUrl: string): string {
   <body class="cms-login-page">
     <main class="cms-login">
       <a class="cms-brand" href="/login"><img src="/assets/logo.jpg" alt="Fullswing" /></a>
-      <h1>Fullswing CMS</h1>
+      <div class="cms-login-copy"><span>CONTENT WORKSPACE</span><h1>Welcome to Fullswing</h1><p>Sign in to manage stories and publishing.</p></div>
       <a class="cms-primary-action" href="${safeAuthorizationUrl}">Sign in with Microsoft</a>
+      <p class="cms-login-security">Administrator access only</p>
     </main>
   </body>
 </html>`;

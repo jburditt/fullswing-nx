@@ -35,28 +35,28 @@ export function renderConfigurationPage(options: ConfigurationViewOptions): stri
   const inputs = escapeHtml(JSON.stringify(workflow?.inputs ?? {}, null, 2));
 
   const content = `${errors}${status}${dispatchDetails}
-  <form class="cms-editor-form" action="/configuration" method="post">
+  <form class="cms-settings-form" action="/configuration" method="post">
     <input type="hidden" name="_csrf" value="${csrf}" />
     <input type="hidden" name="expectedRevision" value="${revision}" />
-    <fieldset><legend>Content storage</legend>
+    <fieldset class="cms-settings-section"><legend>Content storage</legend><div class="cms-settings-grid">
       <label class="cms-field">Provider<select name="providerType"><option value="onedrive"${providerType === 'onedrive' ? ' selected' : ''}>OneDrive</option>${demoProviderOption}</select></label>
       <label class="cms-field">Drive ID<input name="driveId" value="${escapeHtml(String(providerSettings.driveId ?? ''))}" required /></label>
       <label class="cms-field">Root folder ID<input name="rootFolderId" value="${escapeHtml(String(providerSettings.rootFolderId ?? ''))}" required /></label>
-    </fieldset>
-    <fieldset><legend>GitHub workflow</legend>
+    </div></fieldset>
+    <fieldset class="cms-settings-section"><legend>GitHub workflow</legend><div class="cms-settings-grid">
       <label class="cms-field">Owner<input name="owner" value="${escapeHtml(workflow?.owner ?? '')}" required /></label>
       <label class="cms-field">Repository<input name="repository" value="${escapeHtml(workflow?.repository ?? '')}" required /></label>
       <label class="cms-field">Workflow file or ID<input name="workflow" value="${escapeHtml(workflow?.workflow ?? '')}" required /></label>
       <label class="cms-field">Ref<input name="ref" value="${escapeHtml(workflow?.ref ?? '')}" required /></label>
       <label class="cms-field cms-field--wide">Workflow inputs<textarea name="inputs" rows="6">${inputs}</textarea></label>
       <label class="cms-field">GitHub token<input type="password" name="githubToken" value="" autocomplete="new-password" /></label>
-      <p>Credential: ${workflow?.credentialConfigured ? 'Configured' : 'Not configured'}</p>
-    </fieldset>
-    <button type="submit">Save configuration</button>
+      <p class="cms-credential-state">Credential <strong>${workflow?.credentialConfigured ? 'Configured' : 'Not configured'}</strong></p>
+    </div></fieldset>
+    <div class="cms-settings-actions"><button class="cms-button" type="submit">Save configuration</button></div>
   </form>
-  <form action="/github/dispatch" method="post">
+  <form class="cms-dispatch-form" action="/github/dispatch" method="post">
     <input type="hidden" name="_csrf" value="${csrf}" />
-    <button type="submit">Dispatch saved workflow</button>
+    <div><strong>Publish the website</strong><span>Run the saved GitHub Actions workflow.</span></div><button class="cms-button cms-button--quiet" type="submit">Dispatch workflow</button>
   </form>`;
 
   return renderCmsLayout({ title: 'Configuration', content, csrfToken: options.csrfToken, activeItem: 'configuration' });

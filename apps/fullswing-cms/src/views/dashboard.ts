@@ -52,7 +52,7 @@ export function renderDashboardPage(options: DashboardViewOptions): string {
     </tr>`;
   }).join('');
   const results = entries.length > 0
-    ? `<table><thead><tr><th scope="col">Type</th><th scope="col">Title</th><th scope="col">Author</th><th scope="col">Date</th><th scope="col">Categories</th></tr></thead><tbody>${rows}</tbody></table>${renderPagination(page, filters)}`
+    ? `<div class="cms-table-wrap"><table class="cms-data-table cms-data-table--dashboard"><thead><tr><th scope="col">Type</th><th scope="col">Title</th><th scope="col">Author</th><th scope="col">Date</th><th scope="col">Categories</th></tr></thead><tbody>${rows}</tbody></table></div>${renderPagination(page, filters)}`
     : '<p class="dashboard-empty" role="status">No content matches these filters.</p>';
   const csrfToken = escapeHtml(options.csrfToken);
 

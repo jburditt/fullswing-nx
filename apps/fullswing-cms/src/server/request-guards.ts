@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AdminAllowlist } from '../auth/identity-provider.js';
-import type { SessionStore } from '../auth/session-store.js';
+import type { CmsSession, SessionStore } from '../auth/session-store.js';
 
 const SESSION_COOKIE = 'fullswing_cms_session';
 const PUBLIC_GET_PATHS = new Set(['/login', '/auth/callback']);
@@ -10,6 +10,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 export interface RequestGuardDependencies {
   sessions: SessionStore;
   allowlist: AdminAllowlist;
+  developmentSession?: CmsSession;
 }
 
 function matchesToken(expected: string, received: string | undefined): boolean {
@@ -42,6 +43,12 @@ export function registerRequestGuards(
 ): void {
   app.addHook('onRequest', async (request, reply) => {
     const requestUrl = new URL(request.url, 'http://localhost');
+    if (dependencies.developmentSession && request.method === 'GET' && (
+      requestUrl.pathname === '/login' || requestUrl.pathname === '/auth/callback'
+    )) {
+      return reply.redirect('/dashboard', 303);
+    }
+
     const isPublicGet = request.method === 'GET' && (
       PUBLIC_GET_PATHS.has(requestUrl.pathname) || requestUrl.pathname.startsWith('/assets/')
     );
@@ -49,16 +56,20 @@ export function registerRequestGuards(
       return;
     }
 
-    const signedCookie = request.cookies[SESSION_COOKIE];
-    const unsignedCookie = signedCookie ? request.unsignCookie(signedCookie) : undefined;
-    const sessionId = unsignedCookie?.value;
-    if (!unsignedCookie?.valid || typeof sessionId !== 'string' || !sessionId) {
-      return reply.redirect(`/login?returnTo=${encodeURIComponent(requestUrl.pathname)}`, 302);
+    let session = dependencies.developmentSession;
+    if (!session) {
+      const signedCookie = request.cookies[SESSION_COOKIE];
+      const unsignedCookie = signedCookie ? request.unsignCookie(signedCookie) : undefined;
+      const sessionId = unsignedCookie?.value;
+      if (!unsignedCookie?.valid || typeof sessionId !== 'string' || !sessionId) {
+        return reply.redirect(`/login?returnTo=${encodeURIComponent(requestUrl.pathname)}`, 302);
+      }
+
+      session = await dependencies.sessions.get(sessionId);
     }
 
-    const session = await dependencies.sessions.get(sessionId);
     if (!session || session.expiresAt <= Date.now()) {
-      await dependencies.sessions.delete(sessionId);
+      if (session) await dependencies.sessions.delete(session.id);
       reply.clearCookie(SESSION_COOKIE, { path: '/' });
       return reply.redirect(`/login?returnTo=${encodeURIComponent(requestUrl.pathname)}`, 302);
     }

@@ -15,6 +15,9 @@ export interface ConfigurationViewOptions {
 export function renderConfigurationPage(options: ConfigurationViewOptions): string {
   const configuration = options.configuration;
   const providerType = configuration?.contentProvider.type ?? 'onedrive';
+  const demoProviderOption = providerType === 'demo'
+    ? '<option value="demo" selected>Local demo</option>'
+    : '';
   const providerSettings = configuration?.contentProvider.settings ?? {};
   const workflow = configuration?.githubWorkflow;
   const errors = options.issues?.length
@@ -36,7 +39,7 @@ export function renderConfigurationPage(options: ConfigurationViewOptions): stri
     <input type="hidden" name="_csrf" value="${csrf}" />
     <input type="hidden" name="expectedRevision" value="${revision}" />
     <fieldset><legend>Content storage</legend>
-      <label class="cms-field">Provider<select name="providerType"><option value="onedrive"${providerType === 'onedrive' ? ' selected' : ''}>OneDrive</option></select></label>
+      <label class="cms-field">Provider<select name="providerType"><option value="onedrive"${providerType === 'onedrive' ? ' selected' : ''}>OneDrive</option>${demoProviderOption}</select></label>
       <label class="cms-field">Drive ID<input name="driveId" value="${escapeHtml(String(providerSettings.driveId ?? ''))}" required /></label>
       <label class="cms-field">Root folder ID<input name="rootFolderId" value="${escapeHtml(String(providerSettings.rootFolderId ?? ''))}" required /></label>
     </fieldset>

@@ -57,6 +57,40 @@ test('an authenticated allowlisted administrator reaches a protected page', asyn
   assert.equal(response.json().identity, testAdministrator.objectId);
 });
 
+test('a development session skips login but retains allowlist and CSRF checks', async () => {
+  const developmentSession = {
+    id: 'local-session',
+    identity: testAdministrator,
+    tokenCacheReference: 'local-cache',
+    csrfToken: 'local-csrf',
+    createdAt: Date.now(),
+    expiresAt: Number.MAX_SAFE_INTEGER,
+  };
+  const app = createApp({ sessionCookieSecret: 'test-cookie-secret-that-is-at-least-32-characters', secureCookies: false });
+  registerRequestGuards(app, {
+    sessions: new FakeSessionStore(),
+    allowlist: new FakeAdminAllowlist(),
+    developmentSession,
+  });
+  app.get('/dashboard', async request => ({ identity: request.cmsSession?.identity.objectId }));
+  app.post('/save', async request => ({ csrfVerified: request.csrfVerified }));
+  await app.ready();
+
+  const login = await app.inject({ method: 'GET', url: '/login' });
+  const dashboard = await app.inject({ method: 'GET', url: '/dashboard' });
+  const rejectedWrite = await app.inject({ method: 'POST', url: '/save', payload: { value: 'x' } });
+  const acceptedWrite = await app.inject({
+    method: 'POST', url: '/save', headers: { 'x-csrf-token': 'local-csrf' }, payload: { value: 'x' },
+  });
+  await app.close();
+
+  assert.equal(login.statusCode, 303);
+  assert.equal(login.headers.location, '/dashboard');
+  assert.equal(dashboard.json().identity, testAdministrator.objectId);
+  assert.equal(rejectedWrite.statusCode, 403);
+  assert.equal(acceptedWrite.json().csrfVerified, true);
+});
+
 test('unsafe requests require the session CSRF token from a header or form body', async () => {
   const sessions = new FakeSessionStore();
   await sessions.set({

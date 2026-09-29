@@ -19,7 +19,9 @@ The tests use fakes and mocked Graph/GitHub clients; no tenant credentials or ne
 
 There is no built-in production persistence adapter or deployment-specific Entra composition in this package. The host is responsible for durable, access-controlled configuration and secret storage, session lifecycle, network policy, HTTPS termination, and provisioning the CMS settings. Do not use the test fakes as production stores.
 
-For standalone startup, provide an absolute `CMS_BOOTSTRAP_MODULE` path to an ESM module exporting `createCmsDependencies()`, then run `npm --workspace=fullswing-cms run start` from the workspace root. The factory must return the deployment-owned adapters described above. Startup fails with a generic message if the composition is missing or invalid; adapter errors and credential values are not printed.
+For local development, `composition.mjs` uses a hard-coded `Local Developer` identity, a seeded in-memory demo content provider, and in-memory configuration, secret, and session stores. Run `npm --workspace=fullswing-cms run start` from the workspace root, then open `http://localhost:3000/dashboard`. The dashboard includes sample blog drafts and a sample page; edits are lost when the process restarts. This bypass is only for local testing; OneDrive still requires Entra authentication, and the local composition refuses to start when `NODE_ENV=production`. This composition is not suitable for production: configuration, content, sessions, and token caches are lost on restart and are not shared across instances.
+
+For deployment, provide a separate `CMS_BOOTSTRAP_MODULE` ESM module exporting `createCmsDependencies()` and use durable, access-controlled adapters as described above. Startup fails with a generic message if the composition is missing or invalid; adapter errors and credential values are not printed.
 
 ## Required Settings
 

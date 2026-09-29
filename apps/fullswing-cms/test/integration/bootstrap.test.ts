@@ -7,7 +7,7 @@ import { ContentProviderRegistry } from '../../src/content/storage/provider-regi
 test('createCmsApp mounts authenticated CMS routes using the configured provider', async () => {
   const sessions = new FakeSessionStore();
   await sessions.set({
-    id: 'bootstrap-session', identity: testAdministrator, tokenCacheReference: 'bootstrap-cache', csrfToken: 'bootstrap-csrf',
+    id: 'bootstrap-session', identity: testAdministrator, tokenCacheReference: '', csrfToken: 'bootstrap-csrf',
     createdAt: Date.now(), expiresAt: Date.now() + 60_000,
   });
   const configurations = new FakeConfigurationStore({

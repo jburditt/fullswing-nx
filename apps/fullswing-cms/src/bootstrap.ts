@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { AdminAllowlist, IdentityProvider } from './auth/identity-provider.js';
-import type { SessionStore } from './auth/session-store.js';
+import type { CmsSession, SessionStore } from './auth/session-store.js';
 import type { ConfigurationStore } from './config/configuration-store.js';
 import type { SecretStore } from './config/secret-store.js';
 import { CmsError } from './content/domain/content-errors.js';
@@ -28,6 +28,7 @@ export interface CmsApplicationDependencies {
   contentProviders: ContentProviderRegistry;
   sessionCookieSecret: string;
   secureCookies: boolean;
+  developmentSession?: CmsSession;
 }
 
 declare module 'fastify' {
@@ -66,6 +67,7 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
   registerRequestGuards(app, {
     sessions: dependencies.sessionStore,
     allowlist: dependencies.allowlist,
+    developmentSession: dependencies.developmentSession,
   });
 
   if (!dependencies.contentProviders.has('onedrive')) {
@@ -89,9 +91,6 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
     const configuration = await dependencies.configurationStore.read();
     if (!configuration) {
       throw new CmsError('configuration-invalid', 'Configure a content provider before using the dashboard.', 400);
-    }
-    if (!context?.tokenCacheReference) {
-      throw new CmsError('authentication-required', 'Sign in to access content.', 401);
     }
     return dependencies.contentProviders.resolve({
       ...configuration.contentProvider,
@@ -132,7 +131,7 @@ export async function startCms(
 ): Promise<FastifyInstance> {
   const app = await createCmsApp(dependencies);
   await app.listen({
-    host: options.host ?? process.env.HOST ?? '0.0.0.0',
+    host: options.host ?? process.env.HOST ?? (dependencies.developmentSession ? '127.0.0.1' : '0.0.0.0'),
     port: options.port ?? Number(process.env.PORT ?? 3000),
   });
   return app;

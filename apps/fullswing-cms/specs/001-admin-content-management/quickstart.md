@@ -15,22 +15,21 @@ npm exec nx run fullswing-cms:compile
 npm exec nx run fullswing-cms:test
 ```
 
-Expected result: TypeScript compilation succeeds and the native Node test runner reports passing CMS, provider-contract, authentication, and mocked-Graph tests.
+Expected result: TypeScript compilation succeeds and the native Node test runner reports passing CMS, provider-contract, authentication, mocked-Graph, configuration, GitHub dispatch, and page-placeholder tests.
 
 ## Validation Scenarios
 
-1. **Access control**: Request Dashboard, editor, and Configuration anonymously; each returns Login without protected page content. Sign in as an allowlisted fake identity and as an unlisted identity; only the allowlisted identity receives protected content.
-2. **Provider independence**: Run the provider conformance suite against the in-memory fake. Dashboard filters, metadata validation, Markdown preview, and save behavior pass without importing OneDrive/Graph modules.
-3. **Provider switch**: Configure a second fake provider, validate it, and switch the active provider. Confirm the new source is read, the old fake's contents and write count remain unchanged, and a form opened against the previous configuration revision cannot save into the new source.
-4. **OneDrive pagination**: Mock more than one Graph page and verify every `@odata.nextLink` is followed; the final dashboard collection contains every entry exactly once.
-5. **Pair and concurrency failures**: Mock a stale eTag/412 and a failure on the second sidecar write. Verify a conflict or explicit partial-write state, no false success response, and no secret/token text in logs.
-6. **Delegated folder access**: Mock a signed-in allowlisted administrator who lacks access to the configured folder. Verify dashboard/save reports a non-sensitive access failure and makes no app-only request.
-7. **GitHub workflow dispatch**: With a mocked GitHub client, dispatch the saved owner/repository/workflow/ref and configured inputs using the server-side token. Verify an accepted response reports dispatch acceptance/run ID only, and invalid settings, unauthorized users, API errors, and throttling report failure without leaking the token.
-8. **Preview safety**: Render Markdown containing a script, event-handler attribute, and unsafe URL. Confirm the preview output contains no active script/handler and normal headings, links, and code fences still render.
-9. **Metadata contract**: Test valid metadata, invalid calendar dates, wrong route prefixes, empty categories, invalid JSON, duplicate routes, and orphaned `.md`/`.json` items. Verify invalid content is never written.
+1. **Application composition and access control**: `bootstrap.test.ts` verifies routes are mounted; `auth-routes.test.ts`, `dashboard.test.ts`, `blog-editor.test.ts`, `configuration.test.ts`, and `github-dispatch-route.test.ts` verify protected endpoints and CSRF enforcement.
+2. **Provider independence and switching**: `content-storage-provider.test.ts` and `provider-selection.test.ts` exercise the storage contract, invalid-candidate preservation, and non-migrating valid switches using fakes.
+3. **OneDrive listing**: `onedrive-list.test.ts` verifies nested folders, continuation links, matched pairs, malformed metadata, orphaned sidecars, and duplicate routes.
+4. **OneDrive concurrency and partial writes**: `onedrive-save.test.ts` verifies stale versions, Graph 412 eTag races, successful pair updates, first/second-write failures, compensation, and explicit partial-write errors.
+5. **Delegated access and errors**: `onedrive-configuration.test.ts` verifies the signed-in session token-cache reference reaches the OneDrive gateway factory; `onedrive-errors.test.ts` checks authorization, throttling, conflict, and sanitized provider errors.
+6. **GitHub dispatch**: `github-workflow-dispatch.test.ts` and `github-dispatch-route.test.ts` verify saved-target-only requests, masked credentials, accepted status/run details, authorization, CSRF, and safe API failures without claiming workflow completion.
+7. **Page placeholder**: `page-placeholder.test.ts` and `page-listing.test.ts` verify page discovery without retrieving or rendering stored HTML and expose no edit/save controls.
+8. **Preview and metadata safety**: `markdown-preview.test.ts`, `blog-editor.test.ts`, and the content-model metadata tests cover sanitizer behavior, valid metadata, invalid dates/routes, duplicate routes, and rejection before writes.
 
 ## Optional Live OneDrive Smoke Test
 
-With the test tenant configured outside source control, sign in as an allowlisted administrator, load the configured test folder, edit one test Markdown/metadata pair, save, and reopen it. Confirm the version changes, a second browser session sees the saved data, and a deliberately stale form is rejected. Remove test content manually after validation; provider switching never performs that cleanup.
+With the deployment composition and test tenant configured outside source control, sign in as an allowlisted administrator, load the configured test folder, edit one test Markdown/metadata pair, save, and reopen it. Confirm the version changes, a second browser session sees the saved data, and a deliberately stale form is rejected. Verify Graph honors `If-Match` on the file-content endpoint in that test drive before relying on remote compare-and-save behavior. Remove test content manually after validation; provider switching never performs that cleanup.
 
 See [the storage contract](contracts/content-storage-provider.md), [the admin UI contract](contracts/admin-ui.md), and [the GitHub dispatch contract](contracts/github-workflow-dispatch.md) for integration and route behavior.

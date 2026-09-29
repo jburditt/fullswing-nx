@@ -1,0 +1,132 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #202a35;
+  background: #f4f6f7;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+a {
+  color: #175f59;
+  text-underline-offset: 0.18em;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid #d17137;
+  outline-offset: 3px;
+}
+
+.cms-header {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  gap: 24px;
+  padding: 12px max(20px, calc((100vw - 1120px) / 2));
+  background: #fff;
+  border-bottom: 1px solid #d8dfe2;
+}
+
+.cms-brand img {
+  display: block;
+  width: auto;
+  height: 48px;
+}
+
+.cms-navigation {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.cms-navigation a {
+  color: #34434b;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.cms-navigation a[aria-current="page"] {
+  color: #175f59;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.cms-logout button,
+.cms-primary-action {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #175f59;
+  border-radius: 4px;
+  padding: 8px 14px;
+  background: #175f59;
+  color: #fff;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cms-main {
+  width: min(100% - 40px, 1120px);
+  margin: 32px auto;
+}
+
+.cms-main h1 {
+  margin: 0 0 24px;
+  font-size: 1.75rem;
+  font-weight: 650;
+}
+
+.cms-login-page {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #eef4f3 0%, #f6f7f5 55%, #e5eeec 100%);
+}
+
+.cms-login {
+  display: grid;
+  justify-items: start;
+  gap: 20px;
+  width: min(100%, 420px);
+  padding: 36px;
+  border: 1px solid #d8dfe2;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 14px 36px rgb(32 42 53 / 8%);
+}
+
+.cms-login h1 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+@media (max-width: 700px) {
+  .cms-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .cms-navigation {
+    order: 3;
+    flex-basis: 100%;
+    gap: 14px;
+  }
+
+  .cms-logout {
+    margin-left: auto;
+  }
+}

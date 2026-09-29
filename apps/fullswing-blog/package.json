@@ -23,9 +23,10 @@
     "node": ">=20.19.0"
   },
   "dependencies": {
+    "@fullswing/content-model": "*",
+    "@fullswing/markdown-renderer": "^1.0.0",
     "marked": "16.4.0",
-    "prismjs": "1.30.0",
-    "@fullswing/content-model": "*"
+    "prismjs": "1.30.0"
   },
   "devDependencies": {
     "@types/node": "20.17.19",

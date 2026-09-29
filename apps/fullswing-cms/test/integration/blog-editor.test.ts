@@ -86,7 +86,35 @@ test('Preview validates a draft and renders status without saving it', async () 
   assert.equal(response.statusCode, 200);
   assert.match(response.body, /Draft is valid\. The preview has not been saved\./);
   assert.match(response.body, /<h1>Example<\/h1>/);
+  assert.match(response.body, /<textarea name="markdown" id="blog-markdown"/);
   assert.equal(saveCount(), 0);
+});
+
+test('live preview renders sanitized Markdown without saving the draft', async () => {
+  const { app, cookie, saveCount } = await createEditorApp();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/blogs/preview',
+    headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    payload: new URLSearchParams({ _csrf: 'editor-csrf', markdown: '# Live preview\n\n<script>alert(1)</script>' }).toString(),
+  });
+  await app.close();
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.json().html, /<h1>Live preview<\/h1>/);
+  assert.doesNotMatch(response.json().html, /<script|alert\(1\)/);
+  assert.equal(saveCount(), 0);
+});
+
+test('editor renders split preview controls and loads the live preview client', async () => {
+  const { app, cookie } = await createEditorApp();
+  const response = await app.inject({ method: 'GET', url: '/blogs/new', headers: { cookie } });
+  await app.close();
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /class="cms-editor-split"/);
+  assert.match(response.body, /data-markdown-preview/);
+  assert.match(response.body, /src="\/assets\/cms\.js"/);
 });
 
 test('a stale editor version is rejected without replacing stored content', async () => {

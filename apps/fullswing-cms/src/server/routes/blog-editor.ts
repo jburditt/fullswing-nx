@@ -3,6 +3,7 @@ import { ContentVersionConflictError, CmsError, ValidationError } from '../../co
 import type { ContentStorageProvider } from '../../content/storage/content-storage-provider.js';
 import type { ProviderResolutionContext } from '../../content/storage/provider-registry.js';
 import { validateBlogDraft, type BlogDraftForm } from '../../content/application/validate-blog-draft.js';
+import { renderSafeMarkdownPreview } from '../../content/application/preview-markdown.js';
 import { renderBlogEditor, type BlogEditorValues } from '../../views/blog-editor.js';
 
 export interface BlogEditorRouteDependencies {
@@ -97,6 +98,7 @@ export function registerBlogEditorRoutes(
       values,
       csrfToken: request.cmsSession?.csrfToken ?? '',
       mode: 'edit',
+      previewHtml: values.markdown.trim() ? await renderSafeMarkdownPreview(values.markdown) : undefined,
       statusMessage: new URL(request.url, 'http://localhost').searchParams.has('saved')
         ? 'Blog saved.'
         : 'Edit the draft and choose Preview to validate it.',
@@ -119,6 +121,7 @@ export function registerBlogEditorRoutes(
         values,
         csrfToken,
         mode: 'edit',
+        previewHtml: values.markdown.trim() ? await renderSafeMarkdownPreview(values.markdown) : undefined,
         statusMessage: 'Draft changes are not saved yet.',
       }));
     }
@@ -154,6 +157,11 @@ export function registerBlogEditorRoutes(
     const saved = await provider.saveBlog(draft);
     return reply.redirect(`/blogs/${encodeURIComponent(saved.id)}/edit?saved=1`, 303);
   };
+
+  app.post('/blogs/preview', async (request, reply) => {
+    const markdown = formText(request.body, 'markdown');
+    return reply.send({ html: await renderSafeMarkdownPreview(markdown) });
+  });
 
   app.post('/blogs', async (request, reply) => handleSave(request, reply));
   app.post<{ Params: BlogRouteParams }>('/blogs/:id', async (request, reply) => handleSave(request, reply, request.params.id));

@@ -5,6 +5,7 @@ export interface CmsLayoutOptions {
   content: string;
   csrfToken: string;
   activeItem?: CmsNavigationItem;
+  includeEditorScript?: boolean;
 }
 
 function escapeHtml(value: string): string {
@@ -34,6 +35,7 @@ export function renderCmsLayout(options: CmsLayoutOptions): string {
   const title = escapeHtml(options.title);
   const csrfToken = escapeHtml(options.csrfToken);
   const activeItem = options.activeItem;
+  const editorScript = options.includeEditorScript ? '<script type="module" src="/assets/cms.js"></script>' : '';
 
   return `<!doctype html>
 <html lang="en">
@@ -43,6 +45,7 @@ export function renderCmsLayout(options: CmsLayoutOptions): string {
     <title>${title} | Fullswing CMS</title>
     <link rel="icon" href="/assets/logo.jpg" type="image/jpeg" />
     <link rel="stylesheet" href="/assets/cms.css" />
+    ${editorScript}
   </head>
   <body>
     <header class="cms-header">

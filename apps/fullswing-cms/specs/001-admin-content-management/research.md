@@ -7,15 +7,23 @@
 
 ### Provider boundary and shared content model
 
-**Decision**: Put a semantic `ContentStorageProvider` port and provider registry in `apps/fullswing-cms`. Inject the selected provider into CMS use cases at application startup. OneDrive is the only production provider registered by this feature; use an in-memory fake for contract tests. Do not implement Google Drive, a local-file provider, a database provider, or cross-provider copying in this feature.
+**Decision**: Put a semantic `ContentStorageProvider` port and provider registry in `apps/fullswing-cms`. Inject the selected provider into CMS use cases at application startup. OneDrive is the production provider; local-file and in-memory demo providers are included for development. Do not implement Google Drive, a database provider, or cross-provider copying in this feature.
 
 **Rationale**: Provider-specific IDs, paging, API errors, and concurrency tokens must stop at the adapter boundary. A semantic blog-pair save works for both file-based and record-based stores and avoids making CMS workflows depend on path or Graph concepts. The existing `ContentRepository` is not a database adapter: it accepts already loaded entries and its public entry types include static-publisher paths (`markdownPath`, `metadataPath`, `modulePath`). The shared behavior that is appropriate for reuse is metadata validation, not CMS persistence.
 
-**Alternatives considered**: Injecting OneDrive into route handlers (rejected because every workflow would become provider-specific); adding persistence methods to `ContentRepository` (rejected because its path-bound read model is not an I/O abstraction); adding future providers now (rejected because the feature only promises OneDrive).
+**Alternatives considered**: Injecting OneDrive into route handlers (rejected because every workflow would become provider-specific); adding persistence methods to `ContentRepository` (rejected because its path-bound read model is not an I/O abstraction); treating local files as a production authority (rejected because local mode is a development composition, not a durable deployment adapter).
+
+### Local file layout and page source editing
+
+**Decision**: The local development provider uses a configurable existing writable website `public` directory. Blog pairs use `blog/<year>/<basename>.md` plus `.json`, and HTML page pairs use `pages/<year>/<basename>.html` plus `.json`, where the year is derived from metadata date. HTML source can be edited and saved but is never rendered by the CMS. The current static blog generator does not consume the page pairs.
+
+**Rationale**: Blog files must remain discoverable by the existing publisher. Year-based directories are already part of its source layout. Keeping page source in a separate `pages` tree avoids confusing it with published `.ts` renderers and avoids implying that saving HTML makes it publishable or executable.
+
+**Operational constraint**: `file-composition.mjs` is local-development-only and still uses in-memory configuration, session, and secret stores. The public-directory selection resets on restart; content files remain on disk.
 
 ### Metadata compatibility
 
-**Decision**: Add a pure JSON-string/object parsing and validation function to `@fullswing/content-model`; make the existing `loadMetadata(filePath, expectedRoute)` read the file and delegate to it. CMS providers supply metadata content plus a stable source label to the pure function. Keep the required fields and `YYYY-MM-DD` validation in one shared place.
+**Decision**: Add a pure JSON-string/object parsing and validation function to `@fullswing/content-model`; make the existing `loadMetadata(filePath)` read the file and delegate to it. CMS providers supply metadata content plus a stable source label to the pure function. Keep the required fields and `YYYY-MM-DD` validation in one shared place.
 
 **Rationale**: The current `loadMetadata()` reads from the local filesystem, so using it directly from a OneDrive response would either duplicate rules or introduce temporary files. A pure parser keeps both apps on the same content contract without moving OneDrive into the shared package.
 

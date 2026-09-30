@@ -12,7 +12,8 @@ An implementation must provide equivalents of:
 - `listEntries()`: return all normalized entry summaries; the implementation must follow provider pagination and detect malformed/orphaned pairs rather than silently omitting them.
 - `readEntry(id)`: return the normalized content, metadata, and opaque version token.
 - `saveBlog({ id?, expectedVersion?, markdown, metadata, configRevision })`: create or compare-and-save the complete Markdown/JSON logical pair and return a new version.
-- `readPage(id)`: read/list a page for dashboard identification; HTML editing and page writes are not part of this release.
+- `readPage(id)`: read/list a page for dashboard identification and return HTML source only when supported by the provider.
+- `savePage({ id?, expectedVersion?, html, metadata, configRevision })`: providers that support page authoring create or compare-and-save the complete HTML/JSON logical pair. Providers without page-write support leave pages read-only.
 
 Exact TypeScript signatures belong in the implementation. Provider APIs and errors must not leak past this port.
 
@@ -21,11 +22,23 @@ Exact TypeScript signatures belong in the implementation. Provider APIs and erro
 1. All adapters use the same logical metadata contract and collection-level route uniqueness rules.
 2. The CMS validates the complete candidate before invoking a write.
 3. `saveBlog` must reject stale `expectedVersion` or `configRevision` with a typed conflict; it must not silently overwrite.
-4. A save is successful only when all required pair members are stored. A provider that cannot make a multi-object update atomic must report `PartialWrite` and leave enough safe diagnostic state to repair it.
-5. Provider errors are mapped to typed, non-sensitive errors. Tokens, client secrets, raw authorization headers, and secret settings are never placed in the result.
-6. Implementations may paginate internally but must return a complete collection or an explicit failure; a truncated listing must not appear complete.
-7. Provider selection is explicit. Unknown/unconfigured providers fail closed; there is no silent fallback.
-8. A validated provider switch changes the active source only. It must not read to migrate, write, merge, or delete anything in the previous source.
+4. `savePage`, when supported, has the same stale-version and stale-configuration guarantees as `saveBlog`.
+5. A save is successful only when all required pair members are stored. A provider that cannot make a multi-object update atomic must report `PartialWrite` and leave enough safe diagnostic state to repair it.
+6. Provider errors are mapped to typed, non-sensitive errors. Tokens, client secrets, raw authorization headers, and secret settings are never placed in the result.
+7. Implementations may paginate internally but must return a complete collection or an explicit failure; a truncated listing must not appear complete.
+8. Provider selection is explicit. Unknown/unconfigured providers fail closed; there is no silent fallback.
+9. A validated provider switch changes the active source only. It must not read to migrate, write, merge, or delete anything in the previous source.
+10. HTML page source is data, not executable CMS markup. The CMS must escape it in editor forms and must never render it as trusted HTML.
+
+## Local File Adapter Mapping
+
+- Local-file storage is a development provider, not a replacement for the production OneDrive authority.
+- The configured public directory is validated as an existing writable directory before activation.
+- Blogs are stored as matched Markdown/JSON pairs under `blog/<YYYY>/`; pages are stored as matched HTML/JSON pairs under `pages/<YYYY>/`. `<YYYY>` comes from the metadata date.
+- Basenames are restricted to lowercase letters, digits, and hyphens. Provider IDs are opaque and distinguish entries by kind, year, and basename.
+- Same-basename blogs in different years follow the static publisher's year-prefixed route behavior. Page basenames must remain route-unique.
+- A save that moves a pair between year directories writes the new pair before removing the old pair; failed compensation is reported as a partial write.
+- The static blog generator discovers the blog pairs under `public/blog/`; it does not currently discover or publish HTML pairs under `public/pages/`.
 
 ## OneDrive Adapter Mapping
 
@@ -39,4 +52,4 @@ Exact TypeScript signatures belong in the implementation. Provider APIs and erro
 
 ## Conformance Tests
 
-Run the same suite against an in-memory fake and every production provider. Cover configuration rejection, empty and paginated collections, valid/malformed/orphaned pairs, create/update round-trips, stale versions, invalid metadata with no writes, provider outage, first/second member write failure, and source-switch non-migration. A fake provider proves CMS workflow independence; it does not count as a shipped alternate provider.
+Run contract tests against an in-memory fake and provider-focused tests against each adapter. Cover configuration rejection, empty and paginated collections, valid/malformed/orphaned pairs, create/update round-trips, stale versions, invalid metadata with no writes, provider outage, first/second member write failure, compensation, and source-switch non-migration. Local-file tests should additionally cover year-based paths, duplicate blog basenames, page source round-trips, and escaped form handling. A fake provider proves CMS workflow independence; it does not count as a shipped alternate production provider.

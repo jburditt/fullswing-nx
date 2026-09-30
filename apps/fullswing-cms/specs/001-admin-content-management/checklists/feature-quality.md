@@ -63,7 +63,9 @@
 
 ## Ambiguities & Conflicts
 
-- [ ] CHK030 Is the scope boundary between listed HTML pages and deliberately unavailable HTML editing/preview consistent in the stories, requirements, and assumptions? [Consistency, Spec §User Story 6, FR-015]
+- [ ] CHK030 Is the scope boundary between provider-dependent HTML source editing and unavailable HTML rendering, execution, and publication consistent in the stories, requirements, and assumptions? [Consistency, Spec §User Story 6, FR-015]
+- [ ] CHK033 Are the local public-directory requirements explicit about writability, year-derived paths, sidecar pairing, and path-traversal prevention? [Completeness, Spec §FR-013, FR-022–FR-023]
+- [ ] CHK034 Is the local development composition's in-memory configuration limitation distinguished from the persistence of content files? [Clarity, Spec Assumptions]
 - [ ] CHK031 Does the specification distinguish configuration replacement of secrets from secret readback, rotation, and revocation responsibilities? [Ambiguity, Spec §FR-014, User Story 5]
 - [ ] CHK032 Are any unquantified terms such as “clear,” “explicit,” or “accessible” tied to observable acceptance expectations where they affect sign-off? [Clarity, Spec §FR-004, FR-007, FR-016–FR-017]
 

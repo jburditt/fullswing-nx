@@ -182,11 +182,11 @@ description: "Implementation tasks for Fullswing CMS Admin Content Management"
 
 ---
 
-## Phase 8: User Story 6 - Reach the HTML Page Placeholder (Priority: P3)
+## Phase 8: User Story 6 - Edit HTML Page Source (Priority: P3)
 
-**Goal**: Make HTML pages discoverable while keeping editing, preview, saving, and script execution unavailable.
+**Goal**: Allow source editing through providers that support page writes, while keeping HTML preview, rendering, publication, and script execution unavailable.
 
-**Independent Test**: An administrator can reach the placeholder and identify page entries; the requirements and routes expose no HTML mutation or execution path.
+**Independent Test**: An administrator can edit a page through file storage and round-trip its HTML/metadata pair; read-only providers retain a placeholder, and no route executes or renders page HTML.
 
 ### Tests for User Story 6
 
@@ -198,7 +198,23 @@ description: "Implementation tasks for Fullswing CMS Admin Content Management"
 - [x] T064 [US6] Add authenticated read-only page routes and a clear HTML authoring placeholder in `apps/fullswing-cms/src/server/routes/pages.ts` and `apps/fullswing-cms/src/views/page-placeholder.ts`.
 - [x] T065 [US6] Add page navigation and page-entry summaries without rendering stored HTML in `apps/fullswing-cms/src/views/layout.ts` and `apps/fullswing-cms/src/views/dashboard.ts`.
 
-**Checkpoint**: Page records are visible, while HTML authoring and execution remain out of scope.
+**Checkpoint**: Page source can be edited with capable providers; HTML rendering, execution, and publication remain out of scope.
+
+---
+
+## Phase 10: Local File Development Storage and Page Source Editing
+
+**Purpose**: Record the implemented local development provider, configurable public directory, year-based pair layout, and provider-dependent page editor.
+
+- [x] T071 Add local-file provider tests for year-based blog/page pairs, date-year moves, duplicate blog basenames, stale versions, and basename validation in `apps/fullswing-cms/test/unit/file-content-provider.test.ts`.
+- [x] T072 Implement filesystem discovery, metadata parsing, opaque IDs/versions, pair writes, and rollback reporting in `apps/fullswing-cms/src/content/storage/file-content-provider.ts`.
+- [x] T073 Extend the storage contract with optional page source reads/writes and HTML content in `apps/fullswing-cms/src/content/storage/content-storage-provider.ts` and `apps/fullswing-cms/src/content/domain/content-entry.ts`.
+- [x] T074 Add `file-composition.mjs` and preserve the memory composition in `memory-composition.mjs`, defaulting file storage to `apps/fullswing-blog/public`.
+- [x] T075 Add provider-specific settings selection, public-directory configuration, and provider options to the Configuration view and route; cover saved path settings in `apps/fullswing-cms/src/views/configuration.ts`, `apps/fullswing-cms/src/server/routes/configuration.ts`, and `apps/fullswing-cms/test/integration/configuration.test.ts`.
+- [x] T076 Add provider-dependent page editor routes and HTML source fields while keeping read-only providers on the placeholder in `apps/fullswing-cms/src/server/routes/pages.ts` and `apps/fullswing-cms/src/views/page-placeholder.ts`.
+- [x] T077 Update the file-provider page route dependency fixture and verify the CMS compile in `apps/fullswing-cms/test/integration/page-placeholder.test.ts`.
+- [x] T078 Update the quickstart and operator documentation for file mode, path layout, in-memory local configuration, and non-publication of HTML pages in `apps/fullswing-cms/README.md` and `apps/fullswing-cms/specs/001-admin-content-management/quickstart.md`.
+- [x] T079 Run `npm exec nx run fullswing-cms:test`; all 88 CMS tests pass, including the new provider and page-editing coverage.
 
 ---
 

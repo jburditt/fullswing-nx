@@ -11,8 +11,9 @@
 | `GET` | `/blogs/new` | Admin | Render Markdown and metadata editor. |
 | `GET` | `/blogs/{id}/edit` | Admin | Load a blog pair and its opaque version/config revision. |
 | `POST` | `/blogs` or `/blogs/{id}` | Admin + CSRF | Validate metadata and Markdown, compare expected version/config revision, save complete logical pair, and report saved/conflict/partial status. |
-| `GET` | `/pages/new` or `/pages/{id}` | Admin | Render the HTML authoring placeholder; do not expose edit/save controls or render stored HTML. |
-| `GET` | `/configuration` | Admin | Show selected provider, provider settings, GitHub repository/workflow/ref/inputs, missing configuration, and masked secrets. |
+| `GET` | `/pages/new` or `/pages/{id}` | Admin | Render the HTML source editor when the selected provider supports page saves; otherwise render a read-only placeholder. Never render stored HTML as markup. |
+| `POST` | `/pages` or `/pages/{id}` | Admin + CSRF | When supported by the selected provider, validate metadata and compare expected version/config revision before saving the HTML/JSON pair. |
+| `GET` | `/configuration` | Admin | Show registered providers, settings for the selected provider, including the public-directory path for local files, GitHub repository/workflow/ref/inputs, missing configuration, and masked secrets. |
 | `POST` | `/configuration` | Admin + CSRF | Validate candidate provider/workflow configuration before saving; preserve the current active content source on validation failure. |
 | `POST` | `/configuration/github-workflow/dispatch` | Admin + CSRF | Dispatch only the saved workflow target using its server-side credential; report accepted or failed submission, not workflow completion. |
 
@@ -27,5 +28,6 @@ OAuth callback is a protocol endpoint, not a protected page; it must validate th
 - Provider errors, partial writes, conflicts, and invalid configurations are distinct visible states and are not displayed as success.
 - GitHub dispatch targets come only from saved configuration. Show accepted status only after GitHub accepts the request; do not imply workflow or deployment completion.
 - Markdown preview is sanitized server-side before insertion into the response. Client-side validation may enhance the experience but does not replace server validation.
+- HTML page source is escaped in editor fields; the CMS never previews or executes it. Local-file page pairs are source content only and are not published by the current static blog generator.
 - Forms use CSRF protection; internal navigation uses local relative destinations only.
 - Optional Svelte web components may enhance controls but cannot be required for route access or form completion.

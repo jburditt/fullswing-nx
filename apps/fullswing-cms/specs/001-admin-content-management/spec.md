@@ -6,7 +6,11 @@
 
 **Status**: Draft
 
-**Input**: User description: Create a CMS for managing Fullswing blog Markdown and HTML page content stored in a configured OneDrive folder. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, and configure OneDrive and GitHub Action settings. HTML editing is a placeholder for now.
+**Input**: Update the CMS to support production OneDrive content storage and local-file development storage under the Fullswing blog public directory. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, configure provider and GitHub Action settings, and edit HTML page source only when the selected provider supports page writes. HTML source is never rendered or executed by the CMS.
+
+### Session 2026-09-29
+
+- Q: What local-file layout should the CMS use for blogs and pages? → A: Configure the website `public` directory; store blog Markdown/JSON pairs under `blog/<year>/` and page HTML/JSON pairs under `pages/<year>/`, using the metadata date's year. File-backed HTML source is editable in the CMS but is not rendered or published by the static blog generator.
 
 ## Clarifications
 
@@ -67,11 +71,11 @@ An administrator creates or edits a blog post by entering Markdown and its metad
 
 ### User Story 4 - Use Configurable Content Storage (Priority: P1)
 
-An administrator reads and saves blog and page content through the configured content storage service. OneDrive is the initial supported service. The CMS's dashboard and authoring workflows do not depend on OneDrive-specific behavior, so another supported service can be selected without rewriting those workflows.
+An administrator reads and saves content through the configured provider. OneDrive is the production content source; local-file storage is also available for development against the Fullswing blog workspace. The dashboard and authoring workflows use the common provider contract.
 
 **Why this priority**: The CMS must manage the same source of content that the publishing workflow consumes, report incomplete writes accurately, and allow storage services to evolve independently from content-management workflows.
 
-**Independent Test**: Exercise successful reads and writes, provider failures, and failures while saving a matched blog and metadata pair; then substitute a test provider that meets the same content-storage contract and verify that the dashboard and authoring workflows behave unchanged.
+**Independent Test**: Exercise successful reads and writes, provider failures, stale edits, and incomplete sidecar pairs. Verify that local blog and page files use the configured public directory and the year from metadata, and that switching providers does not migrate content.
 
 **Acceptance Scenarios**:
 
@@ -83,6 +87,9 @@ An administrator reads and saves blog and page content through the configured co
 6. **Given** another service has been added by implementing the content-storage contract, **When** an administrator selects that supported service in configuration, **Then** the dashboard, filtering, editing, validation, and preview workflows operate without provider-specific changes.
 7. **Given** an administrator changes the selected provider, **When** the configuration is saved, **Then** the new provider becomes the active content source, the previous provider's content remains unchanged, and no automatic migration occurs.
 8. **Given** an allowlisted administrator does not have access to the configured OneDrive folder, **When** they load or save content, **Then** the CMS reports an access error and does not present the operation as successful.
+9. **Given** the local-file provider is selected with a valid public directory, **When** an administrator saves a blog, **Then** its Markdown and JSON sidecar are written under `blog/<metadata-year>/` and can be read back.
+10. **Given** the local-file provider is selected, **When** an administrator saves a page, **Then** its HTML source and JSON sidecar are written under `pages/<metadata-year>/` and can be read back without executing the HTML.
+11. **Given** an administrator changes a content date to a different year, **When** they save the item, **Then** the pair is stored in that year's directory and the prior pair is removed only after the new pair is written successfully.
 
 ### User Story 5 - Configure Integrations and Dispatch Workflow (Priority: P2)
 
@@ -101,18 +108,20 @@ An administrator reviews and updates OneDrive and GitHub Action settings, then c
 5. **Given** valid GitHub workflow settings are configured, **When** an administrator triggers the workflow, **Then** the CMS sends an authorized dispatch request and reports whether GitHub accepted or rejected it without claiming that an accepted workflow has completed.
 6. **Given** GitHub settings are incomplete, the administrator is unauthorized, or GitHub rejects or throttles the request, **When** the administrator attempts to trigger the workflow, **Then** the CMS reports a non-sensitive failure and does not display a queued or successful state.
 
-### User Story 6 - Reach the HTML Page Placeholder (Priority: P3)
+### User Story 6 - Edit HTML Page Source (Priority: P3)
 
-An administrator can navigate to the HTML page area, while HTML authoring remains deliberately unavailable in this release.
+An administrator can edit HTML source and metadata when local-file storage is active. Other providers may expose pages as read-only. The CMS never renders or executes stored HTML, and the static blog generator does not publish these page files.
 
-**Why this priority**: The navigation and destination can be established without implying that HTML editing or embedded component execution is ready.
+**Why this priority**: Local page source can be managed alongside blog source while preserving a strict boundary against executing HTML in the CMS.
 
-**Independent Test**: Open the HTML page destination as an administrator and verify it displays a clear placeholder without changing stored content.
+**Independent Test**: Create and edit an HTML page using the local-file provider, verify the matching HTML/JSON pair and year directory, and verify the CMS response never inserts the stored HTML as executable markup. With a read-only provider, verify the placeholder remains available.
 
 **Acceptance Scenarios**:
 
-1. **Given** an administrator chooses the HTML page destination, **When** the destination opens, **Then** it displays a blank-state placeholder and does not offer controls that modify HTML content.
-2. **Given** HTML page entries exist in the content store, **When** the administrator views the dashboard, **Then** those entries can be identified as pages without executing their content.
+1. **Given** local-file storage is active, **When** an administrator opens a page or creates one, **Then** the CMS offers editable HTML source and metadata fields.
+2. **Given** an administrator saves valid page metadata and HTML source, **When** the save completes, **Then** the matching page pair is stored and can be reopened with the saved values.
+3. **Given** the stored HTML contains scripts or event handlers, **When** an administrator opens the CMS page editor, **Then** the source is displayed as escaped text and is not executed.
+4. **Given** a provider does not support page writes, **When** an administrator opens a page, **Then** the CMS displays the read-only placeholder and offers no save controls.
 
 ### Edge Cases
 
@@ -122,6 +131,9 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - The selected content-storage service is unavailable, access is revoked, or content changes during an edit; the CMS reports the condition and does not claim an unsuccessful read or write succeeded.
 - An allowlisted administrator lacks permission to the configured OneDrive folder; OneDrive access fails explicitly and the CMS does not fall back to app-only access.
 - A storage service is not supported or its configuration is incomplete; the CMS does not silently fall back to another service or present content from the wrong source.
+- A local public directory is missing, not a directory, or not writable; configuration validation fails without switching the active provider.
+- A local content file in a four-digit year directory is missing its matching sidecar or has malformed metadata; the CMS reports invalid content instead of silently omitting it. Content is discovered only in four-digit year directories.
+- A local pair is being moved to a different year and writing the new pair fails; the prior pair remains available and no successful save is reported.
 - The selected provider changes while the previous provider contains content; the previous provider remains unchanged, and the CMS does not automatically copy, merge, or migrate its content.
 - A Markdown file has no metadata pair, its metadata is malformed, its route conflicts with another entry, or required metadata is missing; the item is not silently accepted as valid.
 - A date is malformed or not a real calendar date, or categories are missing or empty; validation identifies the invalid metadata.
@@ -129,7 +141,7 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - A dashboard filter produces no matches or the underlying folder contains no entries; the page shows an empty state rather than an error.
 - A secret has not been configured, is rejected by an integration, or is replaced; the UI and logs do not disclose its value.
 - The GitHub credential is invalid or revoked, the configured workflow cannot be dispatched, or GitHub throttles or rejects a request; the CMS reports dispatch failure and does not claim deployment completion.
-- An HTML page is selected for editing before that capability is implemented; the CMS leaves it read-only and shows the placeholder.
+- An HTML page is selected while the active provider is read-only; the CMS leaves it read-only and shows the placeholder.
 
 ## Requirements *(mandatory)*
 
@@ -142,26 +154,28 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **FR-005**: The Dashboard MUST list available blog and page entries and support filtering by content type, title, date range, author, and category, including combined filters and a clear-filters action.
 - **FR-006**: The Markdown authoring page MUST allow an administrator to create or edit blog Markdown and the associated metadata, switch between editing and formatted preview, and see a status change when validation results change.
 - **FR-007**: The Markdown and metadata validation status MUST be understandable without relying on color alone and MUST identify the fields or content that need correction.
-- **FR-008**: A blog's metadata MUST remain compatible with the existing Fullswing content contract, including its route, title, author, date, and categories; invalid or incomplete metadata MUST be rejected before storage.
+- **FR-008**: Blog and page metadata MUST remain compatible with the Fullswing content contract, including title, author, date, and categories; invalid or incomplete metadata MUST be rejected before storage. Routes MUST be derived consistently with the content kind and basename.
 - **FR-009**: The Markdown preview MUST NOT execute scripts, event handlers, or other active content supplied in stored or edited content.
-- **FR-010**: The CMS MUST access blog and HTML page content through a provider-neutral content-storage capability; the configured OneDrive folder MUST be the authoritative store when OneDrive is selected.
+- **FR-010**: The CMS MUST access blog and HTML page content through a provider-neutral content-storage capability. The configured OneDrive folder MUST be authoritative when OneDrive is selected; the local-file provider MUST use the configured website public directory.
 - **FR-011**: The CMS MUST report successful saves only after all required content for that save has been stored; failed or partial writes MUST be reported and MUST identify any unresolved content mismatch.
 - **FR-012**: The CMS MUST detect when an item has changed since it was loaded and MUST prevent an unreviewed overwrite of the newer content.
-- **FR-013**: The Configuration page MUST allow administrators to select a supported content-storage provider and manage its required settings, as well as the values needed for GitHub Action invocation; it MUST identify missing or invalid required values. Saving a provider change MUST make the newly selected provider authoritative without modifying or migrating content in the previous provider.
+- **FR-013**: The Configuration page MUST allow administrators to select a registered content-storage provider and manage its required settings, including the local-file public directory, as well as the values needed for GitHub Action invocation; it MUST identify missing or invalid required values. Saving a provider change MUST make the newly selected provider authoritative without modifying or migrating content in the previous provider.
 - **FR-014**: OAuth credentials, access tokens, refresh tokens, OneDrive secrets, and other secret configuration values MUST NOT be committed, exposed in client-visible page content, or logged. Saved secrets MUST be masked when configuration is revisited.
-- **FR-015**: The CMS MUST provide an HTML page destination that displays a placeholder; HTML editing, saving, and embedded Svelte execution are out of scope for this release.
+- **FR-015**: When the selected provider supports page writes, the CMS MUST allow administrators to create and edit HTML source and metadata. HTML MUST be treated as source text in the CMS and MUST NOT be rendered or executed. Providers without page-write support MUST present a read-only placeholder. HTML files stored under `public/pages/` are not consumed by the current static blog generator.
 - **FR-016**: The core administration and authoring workflows MUST remain usable without optional Svelte web components, and validation, status, navigation, and error feedback MUST be accessible by keyboard and assistive technology.
 - **FR-017**: A content-storage provider or identity-provider failure MUST produce an explicit, non-sensitive error and MUST NOT be represented as a successful operation.
 - **FR-018**: Provider-specific storage behavior MUST be isolated from dashboard, filtering, authoring, validation, and preview workflows behind a common content-storage contract. Adding a provider that satisfies this contract MUST NOT require rewriting those workflows.
 - **FR-019**: OneDrive operations MUST use delegated access for the currently signed-in administrator. Each allowlisted administrator MUST have access to the configured folder; missing folder access MUST be reported without falling back to an independent app identity.
 - **FR-020**: The CMS MUST provide an authenticated, CSRF-protected action for an administrator to dispatch the configured GitHub workflow. It MUST report dispatch acceptance separately from workflow completion, and MUST report invalid configuration, authorization failures, and GitHub API failures without exposing credentials or claiming a successful dispatch.
 - **FR-021**: GitHub workflow configuration MUST identify the repository owner and name, workflow identifier, reference to run, and any configured non-secret workflow inputs. Dispatch MUST use only these saved settings and MUST NOT accept a repository or workflow target override from an individual trigger request.
+- **FR-022**: The local-file provider MUST store blog Markdown/JSON pairs at `<public-directory>/blog/<YYYY>/<basename>.md` and `.json`, and page HTML/JSON pairs at `<public-directory>/pages/<YYYY>/<basename>.html` and `.json`, where `<YYYY>` is derived from the metadata date. It MUST validate the target directory and basename and MUST prevent path traversal.
+- **FR-023**: A local-file save that changes the metadata year MUST write the complete new pair before removing the old pair; if the new write fails, the CMS MUST NOT claim success or delete the old pair.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Blog Entry**: A Markdown blog item and its associated metadata, including route, title, author, date, and one or more categories.
-- **Page Entry**: An HTML page item surfaced in the dashboard; HTML authoring and execution are deferred in this release.
-- **Content Storage Provider**: A configured service that reads and writes content using the CMS content-storage contract; OneDrive is the initial supported provider.
+- **Page Entry**: An HTML source item and metadata surfaced in the dashboard; some providers allow source editing, but the CMS does not render or execute the HTML.
+- **Content Storage Provider**: A configured service that reads and writes content using the CMS content-storage contract; OneDrive is the production provider and local files support development.
 - **Administrator**: An authenticated identity that is authorized by the configured administrator allowlist.
 - **Workflow Dispatch Request**: An administrator's request to invoke the configured GitHub workflow, with a result that distinguishes dispatch acceptance or failure from later workflow completion.
 - **Integration Configuration**: The selected content-storage provider and its settings, together with the values needed to configure GitHub Action invocation; secrets are protected and masked.
@@ -178,11 +192,13 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - **SC-005**: No active script or event-handler test payload executes in the Markdown preview.
 - **SC-006**: Every simulated read, write, partial-write, and stale-edit failure is reported as a failure, with no false success confirmation.
 - **SC-007**: Saved secret values remain undisclosed in the revisited configuration page, browser-visible page content, and application logs.
-- **SC-008**: Administrators can reach the HTML page placeholder, and the placeholder provides no means to modify or execute HTML content.
+- **SC-008**: With a page-write provider, administrators can create and edit HTML source; with a read-only provider, the page destination remains read-only. In all cases, no stored HTML is rendered or executed by the CMS.
 - **SC-009**: A test content-storage provider that satisfies the common contract can be selected and used for dashboard reads and content saves without changing CMS dashboard or authoring workflows.
 - **SC-010**: 100% of OneDrive reads and writes use the signed-in administrator's delegated access; if that administrator lacks configured-folder access, the operation fails explicitly without app-only fallback or a success state.
 - **SC-011**: 100% of GitHub workflow trigger attempts with valid settings return an explicit accepted or failed dispatch state; no accepted dispatch is reported as a completed deployment, and invalid settings or unauthorized requests never produce a queued state.
 - **SC-012**: 100% of accepted workflow dispatches target the saved repository, workflow, reference, and inputs; no trigger request can override the configured target.
+- **SC-013**: 100% of local-file blog and page save tests create a matched body/metadata pair under the year derived from the metadata date, and a subsequent read returns the saved content.
+- **SC-014**: 100% of failed local pair writes leave the prior content intact or report an explicit partial-write failure; no failed save is reported as successful.
 
 ## Assumptions
 
@@ -190,9 +206,11 @@ An administrator can navigate to the HTML page area, while HTML authoring remain
 - Microsoft Entra ID is the identity provider for the first release; the Entra ID tenant registration and credentials are supplied by the deployment environment.
 - OneDrive access uses the signed-in administrator's permissions; every allowlisted administrator is expected to have permission to the configured folder.
 - Existing blog content uses matched Markdown and JSON metadata files, with the required fields defined by the Fullswing content contract.
-- OneDrive is the initial supported content-storage provider and is authoritative when selected. Future providers such as Google Drive, local files, or a database are not delivered by this feature; each can be added by implementing the common content-storage contract and providing its configuration, without rewriting CMS workflows.
+- OneDrive is the production content-storage provider and is authoritative when selected. A local-file provider is included for development and uses the selected Fullswing blog `public` directory. Other providers are not delivered by this feature.
 - Changing the selected provider changes the authoritative content source only; content migration, copying, and synchronization between providers are separate features.
 - The CMS sends GitHub workflow dispatch requests; GitHub runs the workflow asynchronously, and observing workflow completion is outside this feature.
-- HTML page records can be identified in the dashboard, but HTML authoring, preview, saving, and Svelte execution are intentionally deferred.
+- Local-file configuration, sessions, and secrets are held in memory by the development composition and reset when the CMS process restarts; the content files themselves persist on disk.
+- Local-file blogs are compatible with the static blog generator's `public/blog/<year>/` discovery. HTML page source is stored under `public/pages/<year>/` but is not discovered or published by the current generator.
+- HTML page source may be edited through the local-file provider, but HTML preview, rendering, Svelte execution, and publication remain out of scope.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.
 - Optional Svelte enhancements may be added later but are not required for the core administration workflows in this release.

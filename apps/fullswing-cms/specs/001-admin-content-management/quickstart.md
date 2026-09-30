@@ -15,7 +15,7 @@ npm exec nx run fullswing-cms:compile
 npm exec nx run fullswing-cms:test
 ```
 
-Expected result: TypeScript compilation succeeds and the native Node test runner reports passing CMS, provider-contract, authentication, mocked-Graph, configuration, GitHub dispatch, and page-placeholder tests.
+Expected result: TypeScript compilation succeeds and the native Node test runner reports passing CMS, provider-contract, authentication, mocked-Graph, configuration, GitHub dispatch, local-file provider, and page-route tests.
 
 ## Validation Scenarios
 
@@ -25,8 +25,20 @@ Expected result: TypeScript compilation succeeds and the native Node test runner
 4. **OneDrive concurrency and partial writes**: `onedrive-save.test.ts` verifies stale versions, Graph 412 eTag races, successful pair updates, first/second-write failures, compensation, and explicit partial-write errors.
 5. **Delegated access and errors**: `onedrive-configuration.test.ts` verifies the signed-in session token-cache reference reaches the OneDrive gateway factory; `onedrive-errors.test.ts` checks authorization, throttling, conflict, and sanitized provider errors.
 6. **GitHub dispatch**: `github-workflow-dispatch.test.ts` and `github-dispatch-route.test.ts` verify saved-target-only requests, masked credentials, accepted status/run details, authorization, CSRF, and safe API failures without claiming workflow completion.
-7. **Page placeholder**: `page-placeholder.test.ts` and `page-listing.test.ts` verify page discovery without retrieving or rendering stored HTML and expose no edit/save controls.
-8. **Preview and metadata safety**: `markdown-preview.test.ts`, `blog-editor.test.ts`, and the content-model metadata tests cover sanitizer behavior, valid metadata, invalid dates/routes, duplicate routes, and rejection before writes.
+7. **Page source handling**: `page-placeholder.test.ts` and `page-listing.test.ts` verify read-only providers expose no edit/save controls and never render stored HTML; `file-content-provider.test.ts` verifies local HTML/metadata save and readback.
+8. **Local file storage**: `file-content-provider.test.ts` verifies blog and page sidecar pairs are stored under the configured public directory and metadata year, duplicate blog basenames remain addressable, stale versions are rejected, and changing years moves the pair.
+9. **Preview and metadata safety**: `markdown-preview.test.ts`, `blog-editor.test.ts`, and the content-model metadata tests cover sanitizer behavior, valid metadata, invalid dates, duplicate routes, and rejection before writes.
+
+## Optional Local File Smoke Test
+
+From the repository root, select the local file composition and start the CMS:
+
+```powershell
+$env:CMS_BOOTSTRAP_MODULE = './file-composition.mjs'
+npm --workspace=fullswing-cms run start
+```
+
+The local composition defaults to `apps/fullswing-blog/public`; the Configuration page can select another existing writable public directory. Blogs are written to `blog/<year>/<basename>.md` and `.json`. Pages are written to `pages/<year>/<basename>.html` and `.json`. The composition's configuration, session, and secret stores are in memory, so provider settings reset when the process restarts. The CMS does not render stored HTML, and the static blog generator does not publish local page pairs.
 
 ## Optional Live OneDrive Smoke Test
 

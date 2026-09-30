@@ -51,10 +51,10 @@ export class OneDriveContentStorageProvider implements ContentStorageProvider {
     const entries = await Promise.all(pairs.map(async pair => this.toSummary(await this.loadMetadata(pair))));
     const routes = new Set<string>();
     for (const entry of entries) {
-      if (routes.has(entry.metadata.route)) {
-        throw new CmsError('validation-failed', `OneDrive contains duplicate content route "${entry.metadata.route}".`, 400);
+      if (routes.has(entry.route)) {
+        throw new CmsError('validation-failed', `OneDrive contains duplicate content route "${entry.route}".`, 400);
       }
-      routes.add(entry.metadata.route);
+      routes.add(entry.route);
     }
     return entries.sort((left, right) => right.metadata.dateValue.getTime() - left.metadata.dateValue.getTime()
       || left.metadata.title.localeCompare(right.metadata.title));
@@ -82,10 +82,10 @@ export class OneDriveContentStorageProvider implements ContentStorageProvider {
 
   async saveBlog(request: SaveBlogRequest): Promise<BlogContent> {
     if (request.configRevision !== this.configurationRevision) throw new ContentVersionConflictError();
-    const basename = getBlogBasename(request.metadata.route);
+    const basename = assertValidBasename(request.basename);
     let metadata: ParsedMetadata;
     try {
-      metadata = parseMetadata(JSON.stringify(request.metadata), `/blog/${basename}`, 'submitted blog metadata');
+      metadata = parseMetadata(JSON.stringify(request.metadata), 'submitted blog metadata');
     } catch (error) {
       throw new CmsError('validation-failed', error instanceof Error ? error.message : 'Blog metadata is invalid.', 400);
     }
@@ -115,7 +115,7 @@ export class OneDriveContentStorageProvider implements ContentStorageProvider {
     }
 
     const entries = await this.listEntries();
-    if (entries.some(entry => entry.id !== request.id && entry.metadata.route === metadata.route)) {
+    if (entries.some(entry => entry.id !== request.id && entry.route === `/blog/${basename}`)) {
       throw new CmsError('validation-failed', 'Another entry already uses this route.', 400);
     }
 
@@ -288,12 +288,10 @@ export class OneDriveContentStorageProvider implements ContentStorageProvider {
     if (!bodyItem?.eTag || !pair.metadata.item.eTag) {
       throw new CmsError('provider-unavailable', 'OneDrive did not provide version tags for this content pair.', 502);
     }
-    const expectedRoute = `/${pair.kind}/${pair.basename}`;
     let metadata: ParsedMetadata;
     try {
       metadata = parseMetadata(
         this.readMetadataSource(pair),
-        expectedRoute,
         `OneDrive item ${pair.metadata.item.name}`,
       );
     } catch (error) {
@@ -303,6 +301,7 @@ export class OneDriveContentStorageProvider implements ContentStorageProvider {
     return {
       id: this.encodeId(pair),
       kind: pair.kind,
+      route: `/${pair.kind}/${pair.basename}`,
       metadata,
       version: encodeVersion(pair),
     };
@@ -340,8 +339,9 @@ function fingerprint(value: string): string {
   return createHash('sha256').update(value).digest('base64url');
 }
 
-function getBlogBasename(route: string): string {
-  const match = /^\/blog\/([^/?#\\\s]+)$/.exec(route);
-  if (!match) throw new CmsError('validation-failed', 'Use a /blog/<basename> route without spaces or nested paths.', 400);
-  return match[1];
+function assertValidBasename(basename: string): string {
+  if (!basename || basename === '.' || basename === '..' || /[/?#\\\s]/.test(basename)) {
+    throw new CmsError('validation-failed', 'Use a basename without spaces or nested paths.', 400);
+  }
+  return basename;
 }

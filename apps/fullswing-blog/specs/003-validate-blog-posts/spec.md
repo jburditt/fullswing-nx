@@ -7,9 +7,10 @@
 **Status**: Draft
 
 **Input**: User description: "Markdown blog posts are placed in a year folder beneath the blog
-content area with same-basename metadata sidecars. Metadata includes a route, title, categories,
-author, and ISO date. The build recursively discovers year folders and fails fast for an unmatched
-post or metadata sidecar."
+content area with same-basename metadata sidecars. Metadata includes a title, categories,
+author, and ISO date; no route is declared in metadata. The build recursively discovers year
+folders, derives each post's route from its basename (disambiguating same-basename posts across
+years by year prefix), and fails fast for an unmatched post or metadata sidecar."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -53,7 +54,7 @@ failure identifies the offending file and violated rule.
 2. **Given** metadata without matching Markdown, **When** the author publishes the site, **Then**
    publishing stops and identifies the unmatched metadata.
 3. **Given** a complete pair with invalid or incomplete metadata, **When** the author publishes
-   the site, **Then** publishing stops and identifies the invalid field or route mismatch.
+   the site, **Then** publishing stops and identifies the invalid field.
 
 ---
 
@@ -72,8 +73,9 @@ and confirm that its public route is unchanged.
 
 1. **Given** a complete post pair moved between year folders with the same basename, **When** the
    author publishes the site, **Then** the published route remains unchanged.
-2. **Given** two posts that would derive the same public route, **When** the author publishes the
-   site, **Then** publishing stops and identifies the conflict.
+2. **Given** two posts in different year folders that would derive the same public route, **When**
+   the author publishes the site, **Then** the newest year's post publishes at the clean route
+   and the older year's post publishes at a year-prefixed route instead of failing.
 
 ### Edge Cases
 
@@ -95,13 +97,16 @@ and confirm that its public route is unchanged.
   with the same basename in the same folder.
 - **FR-004**: The system MUST stop publication before producing a successful site when either side
   of a required post pair is missing, and MUST identify the unmatched source.
-- **FR-005**: The system MUST require metadata to include non-empty route, title, author, and
-  categories values, plus a valid calendar date in `YYYY-MM-DD` format.
+- **FR-005**: The system MUST require metadata to include non-empty title, author, and
+  categories values, plus a valid calendar date in `YYYY-MM-DD` format, and MUST NOT require or
+  read a route field from metadata.
 - **FR-006**: The system MUST require at least one non-empty category for every blog post.
-- **FR-007**: The system MUST derive each blog post's public route from its basename and MUST
-  require metadata to declare that exact route, regardless of the post's source-year folder.
-- **FR-008**: The system MUST reject post pairs that derive duplicate public routes before
-  publication succeeds.
+- **FR-007**: The system MUST derive each blog post's public route from its basename, independent
+  of the post's source-year folder, without reading any route from metadata.
+- **FR-008**: The system MUST disambiguate blog posts that share a basename across different
+  source-year folders by publishing the newest year at the clean `/blog/<basename>` route and
+  each older year at a `/blog/<year>/<basename>` route, and MUST reject any remaining case where
+  two posts still derive an identical public route.
 - **FR-009**: The system MUST retain a post's public route when its complete source pair moves
   between year-based folders without a basename change.
 
@@ -122,7 +127,7 @@ and confirm that its public route is unchanged.
 - **SC-002**: Publishing stops before successful output for 100% of unmatched post or metadata
   sidecars.
 - **SC-003**: Publishing stops before successful output for 100% of metadata records missing a
-  required field, containing an invalid date, or declaring an inconsistent route.
+  required field or containing an invalid date.
 - **SC-004**: Moving a complete post pair between year folders preserves its public route in 100%
   of cases where its basename is unchanged.
 - **SC-005**: Content authors can identify the source file and failed validation rule from every
@@ -130,9 +135,10 @@ and confirm that its public route is unchanged.
 
 ## Assumptions
 
-- Authors organize content by year for source management, but the year is not part of a post's
-  visitor-facing route.
-- A basename identifies a blog post across all year folders and therefore must be unique.
+- Authors organize content by year for source management; the year is not part of a post's
+  visitor-facing route unless needed to disambiguate a basename shared with another year.
+- A basename identifies a blog post within a single year folder; the same basename may repeat
+  across year folders, and the system disambiguates the resulting routes by year.
 - Existing stable post routes must be preserved when content is reorganized.
 - This feature concerns blog post discovery and validation only; rendering, navigation, and page
   authoring remain outside its scope.

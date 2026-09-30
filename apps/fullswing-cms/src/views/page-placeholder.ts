@@ -5,7 +5,7 @@ export function renderPageList(entries: readonly ContentEntrySummary[], csrfToke
   const pages = entries.filter((entry): entry is ContentEntrySummary & { kind: 'page' } => entry.kind === 'page');
   const rows = pages.map(page => `<tr>
     <td><a href="/pages/${encodeURIComponent(page.id)}">${escapeHtml(page.metadata.title)}</a></td>
-    <td>${escapeHtml(page.metadata.route)}</td>
+    <td>${escapeHtml(page.route)}</td>
     <td>${escapeHtml(page.metadata.author)}</td>
     <td><time datetime="${escapeHtml(page.metadata.date)}">${escapeHtml(page.metadata.date)}</time></td>
   </tr>`).join('');
@@ -18,7 +18,7 @@ export function renderPageList(entries: readonly ContentEntrySummary[], csrfToke
 export function renderPagePlaceholder(page: PageContent | undefined, csrfToken: string): string {
   const title = page ? page.metadata.title : 'HTML authoring';
   const details = page
-    ? `<dl class="cms-page-details"><div><dt>Route</dt><dd>${escapeHtml(page.metadata.route)}</dd></div><div><dt>Author</dt><dd>${escapeHtml(page.metadata.author)}</dd></div><div><dt>Date</dt><dd>${escapeHtml(page.metadata.date)}</dd></div></dl>`
+    ? `<dl class="cms-page-details"><div><dt>Route</dt><dd>${escapeHtml(page.route)}</dd></div><div><dt>Author</dt><dd>${escapeHtml(page.metadata.author)}</dd></div><div><dt>Date</dt><dd>${escapeHtml(page.metadata.date)}</dd></div></dl>`
     : '';
   const content = `<section class="cms-placeholder-panel">${details}<p class="cms-empty-state" role="status">HTML authoring is not available.</p><p><a href="/pages">Back to pages</a></p></section>`;
   return renderCmsLayout({ title, content, csrfToken, activeItem: 'page' });

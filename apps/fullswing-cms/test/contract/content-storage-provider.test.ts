@@ -13,6 +13,7 @@ test('provider contract creates, lists, reads, and updates one logical blog pair
   await provider.validateConfiguration({ type: 'memory', revision: 'config-1', settings: {} });
   const created = await provider.saveBlog({
     configRevision: 'config-1',
+    basename: 'test-entry',
     markdown: '# First version',
     metadata: contentMetadata(),
   });
@@ -23,6 +24,7 @@ test('provider contract creates, lists, reads, and updates one logical blog pair
     id: created.id,
     expectedVersion: created.version,
     configRevision: 'config-1',
+    basename: 'test-entry',
     markdown: '# Updated version',
     metadata: contentMetadata({ title: 'Updated title' }),
   });
@@ -37,6 +39,7 @@ test('provider contract rejects stale content and stale configuration revisions'
   const provider = createProvider();
   const created = await provider.saveBlog({
     configRevision: 'config-1',
+    basename: 'test-entry',
     markdown: '# First version',
     metadata: contentMetadata(),
   });
@@ -46,6 +49,7 @@ test('provider contract rejects stale content and stale configuration revisions'
       id: created.id,
       expectedVersion: 'stale-version',
       configRevision: 'config-1',
+      basename: 'test-entry',
       markdown: '# Stale update',
       metadata: contentMetadata(),
     }),
@@ -56,6 +60,7 @@ test('provider contract rejects stale content and stale configuration revisions'
       id: created.id,
       expectedVersion: created.version,
       configRevision: 'old-config',
+      basename: 'test-entry',
       markdown: '# Old configuration',
       metadata: contentMetadata(),
     }),

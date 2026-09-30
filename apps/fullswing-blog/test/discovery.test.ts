@@ -6,7 +6,6 @@ import { join } from 'node:path';
 import { discoverBlogs, discoverPages } from '../src/lib/discovery.js';
 
 const VALID_METADATA = {
-  route: '/blog/example',
   title: 'Example',
   categories: ['TypeScript'],
   author: 'Test Author',
@@ -44,6 +43,25 @@ test('discoverBlogs should discover posts in year folders', async () => {
   assert.equal(blogs[0]?.route, '/blog/example');
   assert.equal(blogs[0]?.markdownPath, join(yearDirectory, 'example.md'));
   assert.equal(blogs[0]?.metadataPath, join(yearDirectory, 'example.json'));
+});
+
+test('discoverBlogs should year-prefix the route for the older post when basenames collide across years', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fullswing-blog-discovery-'));
+  const blogDirectory = join(root, 'blog');
+  const olderYearDirectory = join(blogDirectory, '2025');
+  const newerYearDirectory = join(blogDirectory, '2026');
+  await mkdir(olderYearDirectory, { recursive: true });
+  await mkdir(newerYearDirectory, { recursive: true });
+  await writeFile(join(olderYearDirectory, 'example.md'), '# Example 2025\n', 'utf8');
+  await writeFile(join(olderYearDirectory, 'example.json'), JSON.stringify(VALID_METADATA), 'utf8');
+  await writeFile(join(newerYearDirectory, 'example.md'), '# Example 2026\n', 'utf8');
+  await writeFile(join(newerYearDirectory, 'example.json'), JSON.stringify(VALID_METADATA), 'utf8');
+
+  const blogs = await discoverBlogs(blogDirectory);
+  const routesById = new Map(blogs.map(blog => [blog.markdownPath, blog.route]));
+
+  assert.equal(routesById.get(join(newerYearDirectory, 'example.md')), '/blog/example');
+  assert.equal(routesById.get(join(olderYearDirectory, 'example.md')), '/blog/2025/example');
 });
 
 test('discoverBlogs should reject non-ISO dates in metadata', async () => {
@@ -88,7 +106,6 @@ test('discoverPages should ignore declaration files and load matching page metad
   await writeFile(
     join(sourcePagesDirectory, 'example.json'),
     JSON.stringify({
-      route: '/page/example',
       title: 'Example Page',
       categories: ['TypeScript'],
       author: 'Test Author',

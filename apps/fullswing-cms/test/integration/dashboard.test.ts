@@ -8,14 +8,13 @@ import { registerRequestGuards } from '../../src/server/request-guards.js';
 
 function blogEntry(id: string, title: string, author: string, date: string, categories: string[]) {
   const metadata: ParsedMetadata = {
-    route: `/blog/${id}`,
     title,
     author,
     date,
     dateValue: new Date(`${date}T00:00:00.000Z`),
     categories,
   };
-  return { id, kind: 'blog' as const, metadata, version: `version-${id}`, markdown: `# ${title}` };
+  return { id, kind: 'blog' as const, route: `/blog/${id}`, metadata, version: `version-${id}`, markdown: `# ${title}` };
 }
 
 async function createDashboardApp(): Promise<{

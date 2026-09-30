@@ -3,7 +3,7 @@ import { renderCmsLayout, escapeHtml } from './layout.js';
 
 export interface BlogEditorValues {
   id?: string;
-  route: string;
+  basename: string;
   title: string;
   author: string;
   date: string;
@@ -64,7 +64,7 @@ export function renderBlogEditor(options: BlogEditorViewOptions): string {
       <section class="cms-writing-pane" aria-label="Blog draft fields">
         <div class="cms-editor-fields">
           <label class="cms-field cms-field--wide">Title<input name="title" value="${escapeHtml(values.title)}" data-preview-title-input required /></label>
-          <label class="cms-field">Route<input name="route" value="${escapeHtml(values.route)}" required /></label>
+          <label class="cms-field">Basename<input name="basename" value="${escapeHtml(values.basename)}" required /></label>
           <label class="cms-field">Author<input name="author" value="${escapeHtml(values.author)}" data-preview-author-input required /></label>
           <label class="cms-field">Date<input type="date" name="date" value="${escapeHtml(values.date)}" data-preview-date-input required /></label>
           <label class="cms-field cms-field--wide">Categories<input name="categories" value="${escapeHtml(values.categories)}" aria-describedby="categories-hint" data-preview-categories-input required /><span id="categories-hint">Separate categories with commas.</span></label>

@@ -9,6 +9,7 @@ export interface ProviderConfiguration {
 
 export interface SaveBlogRequest {
   id?: string;
+  basename: string;
   expectedVersion?: string;
   configRevision: string;
   markdown: string;

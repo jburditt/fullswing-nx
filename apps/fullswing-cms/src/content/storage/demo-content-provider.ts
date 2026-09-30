@@ -10,11 +10,10 @@ export interface DemoContentState {
 
 export function createDemoContentState(): DemoContentState {
   const entries = new Map<string, CmsContentEntry>();
-  const seeds: Array<{ id: string; kind: 'blog' | 'page'; route: string; title: string; date: string; categories: string[]; markdown?: string }> = [
+  const seeds: Array<{ id: string; kind: 'blog' | 'page'; title: string; date: string; categories: string[]; markdown?: string }> = [
     {
       id: 'welcome-to-fullswing',
       kind: 'blog',
-      route: '/blog/welcome-to-fullswing',
       title: 'Welcome to Fullswing',
       date: '2026-09-20',
       categories: ['Announcements'],
@@ -23,7 +22,6 @@ export function createDemoContentState(): DemoContentState {
     {
       id: 'markdown-editor-demo',
       kind: 'blog',
-      route: '/blog/markdown-editor-demo',
       title: 'Markdown editor demo',
       date: '2026-09-12',
       categories: ['Guides', 'Markdown'],
@@ -32,7 +30,6 @@ export function createDemoContentState(): DemoContentState {
     {
       id: 'sample-page',
       kind: 'page',
-      route: '/page/sample-page',
       title: 'Sample page',
       date: '2026-09-01',
       categories: ['Pages'],
@@ -41,17 +38,17 @@ export function createDemoContentState(): DemoContentState {
 
   for (const [index, seed] of seeds.entries()) {
     const metadata = parseMetadata(JSON.stringify({
-      route: seed.route,
       title: seed.title,
       author: 'Fullswing Team',
       date: seed.date,
       categories: seed.categories,
-    }), seed.route, 'local demo content');
+    }), 'local demo content');
     const version = `demo-v${index + 1}`;
+    const route = `/${seed.kind}/${seed.id}`;
     if (seed.kind === 'blog') {
-      entries.set(seed.id, { id: seed.id, kind: 'blog', metadata, markdown: seed.markdown!, version });
+      entries.set(seed.id, { id: seed.id, kind: 'blog', route, metadata, markdown: seed.markdown!, version });
     } else {
-      entries.set(seed.id, { id: seed.id, kind: 'page', metadata, version });
+      entries.set(seed.id, { id: seed.id, kind: 'page', route, metadata, version });
     }
   }
 
@@ -74,7 +71,7 @@ export class DemoContentStorageProvider implements ContentStorageProvider {
 
   async listEntries(): Promise<ContentEntrySummary[]> {
     return [...this.state.entries.values()]
-      .map(entry => ({ id: entry.id, kind: entry.kind, metadata: structuredClone(entry.metadata), version: entry.version }))
+      .map(entry => ({ id: entry.id, kind: entry.kind, route: entry.route, metadata: structuredClone(entry.metadata), version: entry.version }))
       .sort((left, right) => right.metadata.dateValue.getTime() - left.metadata.dateValue.getTime()
         || left.metadata.title.localeCompare(right.metadata.title));
   }
@@ -92,14 +89,14 @@ export class DemoContentStorageProvider implements ContentStorageProvider {
   async saveBlog(request: SaveBlogRequest): Promise<BlogContent> {
     if (request.configRevision !== this.configurationRevision) throw new ContentVersionConflictError();
 
-    const routeMatch = /^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(request.metadata.route);
-    if (!routeMatch) {
-      throw new CmsError('validation-failed', 'Blog routes must use /blog/<slug>.', 400);
+    const basenameMatch = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.exec(request.basename);
+    if (!basenameMatch) {
+      throw new CmsError('validation-failed', 'Blog basenames must use lowercase letters, digits, and hyphens.', 400);
     }
 
     let metadata;
     try {
-      metadata = parseMetadata(JSON.stringify(request.metadata), request.metadata.route, 'submitted blog metadata');
+      metadata = parseMetadata(JSON.stringify(request.metadata), 'submitted blog metadata');
     } catch (error) {
       throw new CmsError('validation-failed', error instanceof Error ? error.message : 'Blog metadata is invalid.', 400);
     }
@@ -112,14 +109,17 @@ export class DemoContentStorageProvider implements ContentStorageProvider {
       throw new ContentVersionConflictError(existing.version);
     }
     if (!existing && request.expectedVersion) throw new ContentVersionConflictError();
-    if ([...this.state.entries.values()].some(entry => entry.id !== request.id && entry.metadata.route === metadata.route)) {
+
+    const id = existing?.id ?? request.basename;
+    const route = `/blog/${id}`;
+    if ([...this.state.entries.values()].some(entry => entry.id !== id && entry.route === route)) {
       throw new CmsError('validation-failed', 'Another entry already uses this route.', 400);
     }
 
-    const id = existing?.id ?? routeMatch[1];
     const saved: BlogContent = {
       id,
       kind: 'blog',
+      route,
       metadata,
       markdown: request.markdown,
       version: `demo-v${++this.state.nextVersion}`,

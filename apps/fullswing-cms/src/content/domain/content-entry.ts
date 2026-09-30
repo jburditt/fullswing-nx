@@ -5,6 +5,7 @@ export type ContentKind = 'blog' | 'page';
 export interface ContentEntrySummary {
   id: string;
   kind: ContentKind;
+  route: string;
   metadata: ParsedMetadata;
   version: string;
 }

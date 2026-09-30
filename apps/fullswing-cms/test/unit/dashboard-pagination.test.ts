@@ -8,14 +8,13 @@ function entries(count: number): ContentEntrySummary[] {
   return Array.from({ length: count }, (_, index) => {
     const date = '2026-01-01';
     const metadata: ParsedMetadata = {
-      route: `/blog/item-${index}`,
       title: `Item ${index}`,
       author: 'Test Author',
       date,
       dateValue: new Date(`${date}T00:00:00.000Z`),
       categories: ['Testing'],
     };
-    return { id: `item-${index}`, kind: 'blog', version: `version-${index}`, metadata };
+    return { id: `item-${index}`, kind: 'blog', route: `/blog/item-${index}`, version: `version-${index}`, metadata };
   });
 }
 

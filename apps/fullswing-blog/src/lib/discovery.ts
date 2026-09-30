@@ -71,6 +71,8 @@ export async function discoverBlogs(blogDirectory: string): Promise<BlogEntry[]>
     throw new Error(formatOrphanMessage('blog metadata', orphanMetadata));
   }
 
+  const routesById = assignBlogRoutes(markdownBasenames);
+
   const blogs = await Promise.all(
     markdownBasenames.map(async relativePath => {
       const markdownPath = filesByRelativePath.get(`${relativePath}.md`)?.absolutePath;
@@ -81,18 +83,67 @@ export async function discoverBlogs(blogDirectory: string): Promise<BlogEntry[]>
       }
 
       const id = basename(relativePath);
-      const metadata = await loadMetadata(metadataPath, `/blog/${id}`);
+      const metadata = await loadMetadata(metadataPath);
       return {
         ...metadata,
         kind: 'blog' as const,
         id,
+        route: routesById.get(relativePath) as string,
         markdownPath,
         metadataPath,
       };
     })
   );
 
+  const seenRoutes = new Set<string>();
+  for (const blog of blogs) {
+    if (seenRoutes.has(blog.route)) {
+      throw new Error(`Blog posts must derive unique routes, but multiple posts resolved to "${blog.route}".`);
+    }
+    seenRoutes.add(blog.route);
+  }
+
   return blogs;
+}
+
+// Same basename in multiple year folders: the newest year keeps the clean route, older years get year-prefixed routes.
+function assignBlogRoutes(relativePaths: string[]): Map<string, string> {
+  const groupsById = new Map<string, string[]>();
+  for (const relativePath of relativePaths) {
+    const id = basename(relativePath);
+    const group = groupsById.get(id) ?? [];
+    group.push(relativePath);
+    groupsById.set(id, group);
+  }
+
+  const routesByRelativePath = new Map<string, string>();
+  for (const [id, group] of groupsById) {
+    if (group.length === 1) {
+      routesByRelativePath.set(group[0], `/blog/${id}`);
+      continue;
+    }
+
+    const withYears = group.map(relativePath => {
+      const separatorIndex = relativePath.indexOf('/');
+      if (separatorIndex === -1) {
+        throw new Error(
+          `Blog posts sharing basename "${id}" must be organized in year folders to disambiguate routes, but "${relativePath}" is not.`
+        );
+      }
+      return { relativePath, yearSegment: relativePath.slice(0, separatorIndex) };
+    });
+
+    withYears.sort((left, right) => right.yearSegment.localeCompare(left.yearSegment));
+
+    withYears.forEach((entry, index) => {
+      routesByRelativePath.set(
+        entry.relativePath,
+        index === 0 ? `/blog/${id}` : `/blog/${entry.yearSegment}/${id}`
+      );
+    });
+  }
+
+  return routesByRelativePath;
 }
 
 export async function discoverPages(sourcePagesDirectory: string, compiledPagesDirectory: string): Promise<PageEntry[]> {
@@ -119,11 +170,12 @@ export async function discoverPages(sourcePagesDirectory: string, compiledPagesD
     rendererBasenames.map(async name => {
       const metadataPath = join(sourcePagesDirectory, `${name}.json`);
       const modulePath = join(compiledPagesDirectory, `${name}.js`);
-      const metadata = await loadMetadata(metadataPath, `/page/${name}`);
+      const metadata = await loadMetadata(metadataPath);
       return {
         ...metadata,
         kind: 'page' as const,
         name,
+        route: `/page/${name}`,
         metadataPath,
         modulePath,
       };

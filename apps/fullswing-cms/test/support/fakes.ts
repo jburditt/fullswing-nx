@@ -170,6 +170,7 @@ export class FakeContentStorageProvider implements ContentStorageProvider {
     return [...this.entries.values()].map(entry => ({
       id: entry.id,
       kind: entry.kind,
+      route: entry.route,
       metadata: structuredClone(entry.metadata),
       version: entry.version,
     }));
@@ -208,6 +209,7 @@ export class FakeContentStorageProvider implements ContentStorageProvider {
     const blog: BlogContent = {
       id,
       kind: 'blog',
+      route: current?.route ?? `/blog/${request.basename}`,
       metadata,
       markdown: request.markdown,
       version: `test-version-${this.nextVersion}`,
@@ -223,7 +225,6 @@ export class FakeContentStorageProvider implements ContentStorageProvider {
 
 export function contentMetadata(overrides: Partial<ContentMetadata> = {}): ContentMetadata {
   return {
-    route: '/blog/test-entry',
     title: 'Test Entry',
     author: 'Test Author',
     date: '2026-01-01',

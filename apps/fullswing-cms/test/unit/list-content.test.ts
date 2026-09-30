@@ -8,15 +8,15 @@ import type { ContentEntrySummary } from '../../src/content/domain/content-entry
 function entry(
   id: string,
   kind: 'blog' | 'page',
-  values: Partial<ParsedMetadata> = {},
+  values: Partial<ParsedMetadata> & { route?: string } = {},
 ): ContentEntrySummary {
   const date = values.date ?? '2026-01-01';
   return {
     id,
     kind,
+    route: values.route ?? `/${kind}/${id}`,
     version: `version-${id}`,
     metadata: {
-      route: values.route ?? `/${kind}/${id}`,
       title: values.title ?? id,
       author: values.author ?? 'Alice Example',
       date,

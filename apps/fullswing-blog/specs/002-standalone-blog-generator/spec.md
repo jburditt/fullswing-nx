@@ -86,8 +86,9 @@ article and code-copy interaction in a browser.
 
 ### Edge Cases
 
-- Duplicate post basenames in different source-year folders cannot produce ambiguous published
-  routes; publishing must stop and identify the conflict.
+- Duplicate post basenames across different source-year folders are disambiguated automatically:
+  the newest source year publishes at the clean route and older years publish at a year-prefixed
+  route, so publishing never stops for this case alone.
 - Unsupported code languages render safely as readable code rather than failing the article.
 - A direct request for a missing, malformed, or path-traversing route returns a not-found response
   without exposing files outside the published site.
@@ -101,13 +102,17 @@ article and code-copy interaction in a browser.
 - **FR-001**: The system MUST publish a static home page, sitemap, blog pages, and rich pages using
   friendly directory-style routes.
 - **FR-002**: The system MUST discover blog posts recursively from their authoring location and
-  derive each blog route from its basename, independent of the source-year folder.
+  derive each blog route purely from its basename, without reading a route from metadata. When
+  multiple source-year folders share a basename, the newest year MUST derive the clean
+  `/blog/<basename>` route and each older year MUST derive a year-prefixed
+  `/blog/<year>/<basename>` route.
 - **FR-003**: The system MUST require a same-basename content and metadata pair for each blog post
-  and rich page, and MUST reject missing pairs, duplicate routes, and invalid metadata before
-  publishing output.
-- **FR-004**: The system MUST require each content item to provide a non-empty route, title,
-  author, categories, and valid calendar date, and MUST verify that its route matches its content
-  kind and basename.
+  and rich page, and MUST reject missing pairs, unresolvable duplicate routes, and invalid metadata
+  before publishing output.
+- **FR-004**: The system MUST require each content item to provide a non-empty title, author,
+  categories, and valid calendar date; metadata MUST NOT declare a route, and the system MUST
+  compute the route from the content kind and basename (with year-based disambiguation for
+  colliding blog basenames).
 - **FR-005**: The system MUST present blogs, pages, and combined content in descending date order,
   using title order to resolve equal dates, and MUST calculate category display names and counts
   from discovered content.
@@ -142,7 +147,7 @@ article and code-copy interaction in a browser.
 - **SC-001**: Publishing a valid content set creates a navigable page for 100% of discovered
   content items, plus the home page and sitemap.
 - **SC-002**: Publishing fails before emitting a successful site when any required content pair,
-  metadata field, date, route, or route uniqueness constraint is invalid.
+  metadata field, date, or computed route uniqueness constraint is invalid.
 - **SC-003**: A visitor can reach any published content page from the home page or sitemap in no
   more than two navigation selections.
 - **SC-004**: Every generated internal navigation link and static asset reference resolves
@@ -155,8 +160,8 @@ article and code-copy interaction in a browser.
 
 - The reference blog defines the expected user-facing behavior; visual design need not be pixel
   identical when equivalent navigation, content, and reading behavior is preserved.
-- Content authors provide valid source files and use unique blog basenames across all source-year
-  folders.
+- Content authors provide valid source files; blog basenames may repeat across source-year
+  folders, and the system disambiguates the resulting routes by year.
 - The first release targets static hosting and ordinary modern web browsers; author editing,
   accounts, comments, search, and analytics are out of scope.
 - Optional diagram enhancement may be supplied by a host environment; authored diagram source must

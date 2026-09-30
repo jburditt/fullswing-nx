@@ -72,7 +72,6 @@ class SaveGraphFake implements OneDriveGraphGateway {
 }
 
 const metadata: ContentMetadata = {
-  route: '/blog/article',
   title: 'Article',
   author: 'Alice',
   date: '2026-01-01',
@@ -93,6 +92,7 @@ test('OneDrive save rejects stale versions before attempting a write', async () 
     id: entry.id,
     expectedVersion: 'stale',
     configRevision: 'config-1',
+    basename: 'article',
     markdown: '# Changed',
     metadata,
   }), ContentVersionConflictError);
@@ -110,6 +110,7 @@ test('OneDrive save maps a Graph eTag race to a version conflict', async () => {
     id: entry.id,
     expectedVersion: entry.version,
     configRevision: 'config-1',
+    basename: 'article',
     markdown: '# Updated',
     metadata,
   }), ContentVersionConflictError);
@@ -126,6 +127,7 @@ test('OneDrive save updates both sidecars and returns the new pair version', asy
     id: entry.id,
     expectedVersion: entry.version,
     configRevision: 'config-1',
+    basename: 'article',
     markdown: '# Updated',
     metadata: { ...metadata, title: 'Updated article' },
   });
@@ -146,6 +148,7 @@ test('OneDrive save leaves both files untouched when the first conditional write
     id: entry.id,
     expectedVersion: entry.version,
     configRevision: 'config-1',
+    basename: 'article',
     markdown: '# Updated',
     metadata,
   }), (error: unknown) => error instanceof CmsError && error.code === 'provider-unavailable');
@@ -164,6 +167,7 @@ test('OneDrive save compensates the first sidecar if the second update fails', a
     id: entry.id,
     expectedVersion: entry.version,
     configRevision: 'config-1',
+    basename: 'article',
     markdown: '# Updated',
     metadata,
   }), (error: unknown) => error instanceof CmsError && error.code === 'provider-unavailable');
@@ -183,6 +187,7 @@ test('OneDrive save reports a partial write if compensation also fails', async (
     id: entry.id,
     expectedVersion: entry.version,
     configRevision: 'config-1',
+    basename: 'article',
     markdown: '# Updated',
     metadata,
   }), PartialContentWriteError);

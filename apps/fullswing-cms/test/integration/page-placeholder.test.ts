@@ -14,9 +14,9 @@ async function createPageApp() {
   });
   const provider = new FakeContentStorageProvider();
   provider.seed({
-    id: 'page-one', kind: 'page', version: 'page-version',
+    id: 'page-one', kind: 'page', route: '/page/landing', version: 'page-version',
     metadata: {
-      route: '/page/landing', title: 'Landing page', author: 'Alice', date: '2026-01-02',
+      title: 'Landing page', author: 'Alice', date: '2026-01-02',
       dateValue: new Date('2026-01-02T00:00:00.000Z'), categories: ['Pages'],
     },
   } satisfies PageContent);

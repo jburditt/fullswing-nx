@@ -30,7 +30,7 @@ function formText(body: unknown, field: keyof BlogEditorValues): string {
 function readValues(body: unknown, id?: string): BlogEditorValues {
   return {
     id,
-    route: formText(body, 'route'),
+    basename: formText(body, 'basename'),
     title: formText(body, 'title'),
     author: formText(body, 'author'),
     date: formText(body, 'date'),
@@ -45,7 +45,7 @@ function initialValues(configRevision: string, id?: string, entry?: Awaited<Retu
   const date = new Date().toISOString().slice(0, 10);
   return {
     id,
-    route: entry?.metadata.route ?? (id ? `/blog/${id}` : '/blog/new-post'),
+    basename: entry ? entry.route.slice('/blog/'.length) : (id ?? 'new-post'),
     title: entry?.metadata.title ?? '',
     author: entry?.metadata.author ?? '',
     date: entry?.metadata.date ?? date,

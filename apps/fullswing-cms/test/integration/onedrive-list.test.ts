@@ -86,8 +86,8 @@ test('OneDriveContentStorageProvider recursively discovers matched blog and page
     file('page-html', 'landing.html'),
     file('page-json', 'landing.json'),
   ]);
-  gateway.contents.set('post-json', JSON.stringify({ route: '/blog/post', title: 'Post', author: 'Alice', date: '2026-01-01', categories: ['News'] }));
-  gateway.contents.set('page-json', JSON.stringify({ route: '/page/landing', title: 'Landing', author: 'Alice', date: '2026-01-02', categories: ['Pages'] }));
+  gateway.contents.set('post-json', JSON.stringify({ title: 'Post', author: 'Alice', date: '2026-01-01', categories: ['News'] }));
+  gateway.contents.set('page-json', JSON.stringify({ title: 'Landing', author: 'Alice', date: '2026-01-02', categories: ['Pages'] }));
   gateway.contents.set('post-md', '# Blog body');
   const provider = new OneDriveContentStorageProvider(gateway, { driveId: 'drive', rootFolderId: 'root' }, 'config-1');
 
@@ -96,8 +96,8 @@ test('OneDriveContentStorageProvider recursively discovers matched blog and page
   const page = entries.find(entry => entry.kind === 'page');
 
   assert.equal(entries.length, 2);
-  assert.equal(blog?.metadata.route, '/blog/post');
-  assert.equal(page?.metadata.route, '/page/landing');
+  assert.equal(blog?.route, '/blog/post');
+  assert.equal(page?.route, '/page/landing');
   assert.deepEqual(gateway.childCalls, ['root', 'year-folder']);
   assert.equal(await provider.readBlog(blog!.id).then(entry => entry?.markdown), '# Blog body');
 });
@@ -112,7 +112,7 @@ test('OneDriveContentStorageProvider rejects orphaned sidecars and duplicate rou
   duplicate.children.set('root', [{ id: 'folder-a', name: '2025', folder: {} }, { id: 'folder-b', name: '2026', folder: {} }]);
   duplicate.children.set('folder-a', [file('a-md', 'post.md'), file('a-json', 'post.json')]);
   duplicate.children.set('folder-b', [file('b-md', 'post.md'), file('b-json', 'post.json')]);
-  const metadata = JSON.stringify({ route: '/blog/post', title: 'Post', author: 'Alice', date: '2026-01-01', categories: ['News'] });
+  const metadata = JSON.stringify({ title: 'Post', author: 'Alice', date: '2026-01-01', categories: ['News'] });
   duplicate.contents.set('a-json', metadata);
   duplicate.contents.set('b-json', metadata);
   const duplicateProvider = new OneDriveContentStorageProvider(duplicate, { driveId: 'drive', rootFolderId: 'root' }, 'config-1');
@@ -122,7 +122,7 @@ test('OneDriveContentStorageProvider rejects orphaned sidecars and duplicate rou
 test('OneDriveContentStorageProvider rejects malformed metadata through shared validation', async () => {
   const gateway = new FakeOneDriveGateway();
   gateway.children.set('root', [file('post-md', 'post.md'), file('post-json', 'post.json')]);
-  gateway.contents.set('post-json', '{"route":"/blog/post"}');
+  gateway.contents.set('post-json', '{}');
   const provider = new OneDriveContentStorageProvider(gateway, { driveId: 'drive', rootFolderId: 'root' }, 'config-1');
 
   await assert.rejects(provider.listEntries(), /title/);
@@ -135,7 +135,7 @@ test('OneDriveContentStorageProvider rejects pairs without eTags needed for comp
     file('post-json', 'post.json'),
   ]);
   gateway.contents.set('post-json', JSON.stringify({
-    route: '/blog/post', title: 'Post', author: 'Alice', date: '2026-01-01', categories: ['News'],
+    title: 'Post', author: 'Alice', date: '2026-01-01', categories: ['News'],
   }));
   const provider = new OneDriveContentStorageProvider(gateway, { driveId: 'drive', rootFolderId: 'root' }, 'config-1');
 

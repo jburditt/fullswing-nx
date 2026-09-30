@@ -31,7 +31,7 @@ test('a valid provider switch does not copy or mutate the previous provider data
   registry.register('previous', () => previous);
   registry.register('next', () => next);
   const selection = new ContentProviderSelection(registry);
-  await previous.saveBlog({ configRevision: 'revision-1', markdown: '# Existing', metadata: contentMetadata() });
+  await previous.saveBlog({ configRevision: 'revision-1', basename: 'existing', markdown: '# Existing', metadata: contentMetadata() });
   await selection.activate({ type: 'previous', revision: 'revision-1', settings: {} });
   const previousEntriesBeforeSwitch = await previous.listEntries();
 

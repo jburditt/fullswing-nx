@@ -1,5 +1,4 @@
 export interface ContentMetadata {
-  route: string;
   title: string;
   categories: string[];
   author: string;
@@ -13,6 +12,7 @@ export interface ParsedMetadata extends ContentMetadata {
 export interface BlogEntry extends ParsedMetadata {
   kind: 'blog';
   id: string;
+  route: string;
   markdownPath: string;
   metadataPath: string;
 }
@@ -20,6 +20,7 @@ export interface BlogEntry extends ParsedMetadata {
 export interface PageEntry extends ParsedMetadata {
   kind: 'page';
   name: string;
+  route: string;
   metadataPath: string;
   modulePath: string;
 }

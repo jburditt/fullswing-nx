@@ -45,7 +45,7 @@ async function createEditorApp(): Promise<{
 
 function blogForm(overrides: Record<string, string> = {}): string {
   return new URLSearchParams({
-    route: '/blog/example',
+    basename: 'example',
     title: 'Example',
     author: 'Test Author',
     date: '2026-02-28',
@@ -122,10 +122,10 @@ test('a stale editor version is rejected without replacing stored content', asyn
   provider.seed({
     id: 'example',
     kind: 'blog',
+    route: '/blog/example',
     version: 'stored-version',
     markdown: '# Original',
     metadata: {
-      route: '/blog/example',
       title: 'Original',
       author: 'Test Author',
       date: '2026-02-28',

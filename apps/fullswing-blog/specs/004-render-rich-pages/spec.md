@@ -7,8 +7,8 @@
 **Status**: Draft
 
 **Input**: User description: "Page renderers and metadata sidecars are placed in the rich-page
-authoring area. Each renderer exports `renderPage(context)` and its sidecar declares the route
-`/page/<basename>`."
+authoring area. Each renderer exports `renderPage(context)` and its route `/page/<basename>` is
+derived from its basename; metadata does not declare a route."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -66,7 +66,7 @@ or inconsistent.
 **Why this priority**: Clear failures prevent broken rich pages from reaching visitors.
 
 **Independent Test**: Publish source sets with an orphan renderer, orphan metadata, malformed
-metadata, and a route mismatch; verify that each failure identifies its source and reason.
+metadata, and duplicate basenames; verify that each failure identifies its source and reason.
 
 **Acceptance Scenarios**:
 
@@ -74,8 +74,8 @@ metadata, and a route mismatch; verify that each failure identifies its source a
    **Then** publishing stops and identifies the unmatched renderer.
 2. **Given** metadata without a matching renderer, **When** the author publishes the site,
    **Then** publishing stops and identifies the unmatched metadata.
-3. **Given** valid renderer and metadata files that declare an inconsistent route, **When** the
-   author publishes the site, **Then** publishing stops and identifies the expected route.
+3. **Given** two renderer-metadata pairs sharing the same basename, **When** the author publishes
+   the site, **Then** publishing stops and identifies the duplicate basename.
 
 ### Edge Cases
 
@@ -97,10 +97,11 @@ metadata, and a route mismatch; verify that each failure identifies its source a
   record and every metadata record to have a same-basename renderer.
 - **FR-003**: The system MUST stop publication before producing a successful site when a renderer
   or metadata record is unmatched, and MUST identify the unmatched source.
-- **FR-004**: The system MUST require rich-page metadata to provide non-empty route, title, author,
-  and categories values and a valid calendar date.
-- **FR-005**: The system MUST derive every rich page's public route from its basename and MUST
-  require metadata to declare the corresponding `/page/<basename>` route.
+- **FR-004**: The system MUST require rich-page metadata to provide non-empty title, author,
+  and categories values and a valid calendar date, and MUST NOT require or read a route field from
+  metadata.
+- **FR-005**: The system MUST derive every rich page's public route from its basename as
+  `/page/<basename>` without reading any route from metadata.
 - **FR-006**: The system MUST make the required page context available to every valid renderer and
   MUST publish the content returned by that renderer within the shared page presentation.
 - **FR-007**: The system MUST provide a safe mechanism for renderers to display dynamic text and
@@ -115,8 +116,8 @@ metadata, and a route mismatch; verify that each failure identifies its source a
 
 - **Rich page renderer**: Authored page content that produces a page body from a supplied page
   context.
-- **Rich page metadata**: The matching record that provides a page's public route, title, author,
-  date, and categories.
+- **Rich page metadata**: The matching record that provides a page's title, author, date, and
+  categories.
 - **Page context**: Information available to a renderer during publication, including its metadata
   and safe dynamic-text display capability.
 - **Rich page**: A discovered renderer-metadata pair published at a friendly page route.

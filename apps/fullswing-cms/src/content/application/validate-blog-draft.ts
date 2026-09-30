@@ -5,7 +5,7 @@ import { ValidationError, type ValidationIssue } from '../domain/content-errors.
 import { renderSafeMarkdownPreview } from './preview-markdown.js';
 
 export interface BlogDraftForm {
-  route?: unknown;
+  basename?: unknown;
   title?: unknown;
   author?: unknown;
   date?: unknown;
@@ -23,15 +23,11 @@ function readText(value: unknown): string | undefined {
   return typeof value === 'string' ? value.trim() : undefined;
 }
 
-function parseBlogRoute(route: string | undefined): string | undefined {
-  if (!route?.startsWith('/blog/')) {
+function parseBasename(basename: string | undefined): string | undefined {
+  if (!basename || basename === '.' || basename === '..' || /[/?#\\\s]/.test(basename)) {
     return undefined;
   }
-  const basename = route.slice('/blog/'.length);
-  if (!basename || basename === '.' || basename === '..' || /[\/?#\\\s]/.test(basename)) {
-    return undefined;
-  }
-  return route;
+  return basename;
 }
 
 function getValidationField(error: Error): string {
@@ -40,7 +36,7 @@ function getValidationField(error: Error): string {
   if (message.includes('author')) return 'author';
   if (message.includes('categories')) return 'categories';
   if (message.includes('date')) return 'date';
-  return 'route';
+  return 'basename';
 }
 
 export async function validateBlogDraft(
@@ -48,7 +44,7 @@ export async function validateBlogDraft(
   provider: ContentStorageProvider,
   options: { id?: string; configRevision: string },
 ): Promise<ValidatedBlogDraft> {
-  const route = readText(body.route);
+  const basename = readText(body.basename);
   const title = readText(body.title);
   const author = readText(body.author);
   const date = readText(body.date);
@@ -57,8 +53,8 @@ export async function validateBlogDraft(
   const expectedVersion = readText(body.expectedVersion);
   const issues: ValidationIssue[] = [];
 
-  if (!parseBlogRoute(route)) {
-    issues.push({ field: 'route', message: 'Use a unique /blog/<basename> route without spaces or nested paths.' });
+  if (!parseBasename(basename)) {
+    issues.push({ field: 'basename', message: 'Use a unique basename without spaces or nested paths.' });
   }
   if (!markdown.trim()) {
     issues.push({ field: 'markdown', message: 'Markdown content is required.' });
@@ -73,15 +69,16 @@ export async function validateBlogDraft(
   const categories = categoriesValue?.split(',').map(category => category.trim()) ?? [];
   let metadata;
   try {
-    metadata = parseMetadata(JSON.stringify({ route, title, author, date, categories }), route!, 'submitted blog metadata');
+    metadata = parseMetadata(JSON.stringify({ title, author, date, categories }), 'submitted blog metadata');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Metadata is invalid.';
     throw new ValidationError([{ field: getValidationField(error instanceof Error ? error : new Error(message)), message }]);
   }
 
+  const route = `/blog/${basename}`;
   const entries = await provider.listEntries();
-  if (entries.some(entry => entry.id !== options.id && entry.metadata.route === metadata.route)) {
-    throw new ValidationError([{ field: 'route', message: 'Another entry already uses this route.' }]);
+  if (entries.some(entry => entry.id !== options.id && entry.route === route)) {
+    throw new ValidationError([{ field: 'basename', message: 'Another entry already uses this basename.' }]);
   }
 
   let previewHtml: string;
@@ -94,6 +91,7 @@ export async function validateBlogDraft(
 
   return {
     id: options.id,
+    basename: basename!,
     expectedVersion,
     configRevision: options.configRevision,
     markdown,

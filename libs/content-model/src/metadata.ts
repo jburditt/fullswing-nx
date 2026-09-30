@@ -46,17 +46,13 @@ function parseDate(value: string, filePath: string): Date {
   return parsed;
 }
 
-export async function loadMetadata(
-  filePath: string,
-  expectedRoute: string,
-): Promise<ParsedMetadata> {
+export async function loadMetadata(filePath: string): Promise<ParsedMetadata> {
   const source = await readFile(filePath, 'utf8');
-  return parseMetadata(source, expectedRoute, filePath);
+  return parseMetadata(source, filePath);
 }
 
 export function parseMetadata(
   source: string,
-  expectedRoute: string,
   sourceName = 'metadata source',
 ): ParsedMetadata {
   let raw: unknown;
@@ -71,21 +67,13 @@ export function parseMetadata(
   }
 
   const object = raw as Record<string, unknown>;
-  const route = assertString(object.route, 'route', sourceName);
   const title = assertString(object.title, 'title', sourceName);
   const author = assertString(object.author, 'author', sourceName);
   const date = assertString(object.date, 'date', sourceName);
   const categories = assertCategories(object.categories, sourceName);
   const dateValue = parseDate(date, sourceName);
 
-  if (route !== expectedRoute) {
-    throw new Error(
-      `Metadata file ${sourceName} must use route "${expectedRoute}" to match its basename, but found "${route}".`
-    );
-  }
-
   return {
-    route,
     title,
     author,
     date,

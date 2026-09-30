@@ -45,7 +45,7 @@ function initialValues(configRevision: string, id?: string, entry?: Awaited<Retu
   const date = new Date().toISOString().slice(0, 10);
   return {
     id,
-    basename: entry ? entry.route.slice('/blog/'.length) : (id ?? 'new-post'),
+    basename: entry ? entry.route.split('/').at(-1) ?? entry.id : 'new-post',
     title: entry?.metadata.title ?? '',
     author: entry?.metadata.author ?? '',
     date: entry?.metadata.date ?? date,

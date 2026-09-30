@@ -33,6 +33,10 @@ export class ConfigurationService {
     return toPublicCmsConfiguration(configuration, credential !== undefined);
   }
 
+  availableProviderTypes(): string[] {
+    return this.providers.types();
+  }
+
   async save(draft: ConfigurationDraft, context?: ProviderResolutionContext): Promise<CmsConfiguration> {
     const current = await this.configurations.read();
     if (current && draft.expectedRevision !== current.revision) {

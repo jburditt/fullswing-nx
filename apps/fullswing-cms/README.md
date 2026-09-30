@@ -1,6 +1,6 @@
 Fullswing CMS
 
-The CMS is a server-rendered Node.js application for managing Fullswing Markdown blogs and discovering HTML pages. It provides Entra sign-in, an administrator dashboard, Markdown editing and sanitized preview, OneDrive-backed content storage, configuration management, and a GitHub Actions dispatch action. HTML page authoring and rendering are intentionally unavailable.
+The CMS is a server-rendered Node.js application for managing Fullswing Markdown blogs and discovering HTML pages. It provides Entra sign-in, an administrator dashboard, Markdown editing and sanitized preview, configurable OneDrive or local-file content storage, configuration management, and a GitHub Actions dispatch action. Local-file storage supports editing HTML page source; the CMS does not render or execute stored HTML.
 
 ## Workspace Commands
 
@@ -19,7 +19,16 @@ The tests use fakes and mocked Graph/GitHub clients; no tenant credentials or ne
 
 There is no built-in production persistence adapter or deployment-specific Entra composition in this package. The host is responsible for durable, access-controlled configuration and secret storage, session lifecycle, network policy, HTTPS termination, and provisioning the CMS settings. Do not use the test fakes as production stores.
 
-For local development, `composition.mjs` uses a hard-coded `Local Developer` identity, a seeded in-memory demo content provider, and in-memory configuration, secret, and session stores. Run `npm --workspace=fullswing-cms run start` from the workspace root, then open `http://localhost:3000/dashboard`. The dashboard includes sample blog drafts and a sample page; edits are lost when the process restarts. This bypass is only for local testing; OneDrive still requires Entra authentication, and the local composition refuses to start when `NODE_ENV=production`. This composition is not suitable for production: configuration, content, sessions, and token caches are lost on restart and are not shared across instances.
+For local development, `memory-composition.mjs` uses a hard-coded `Local Developer` identity, a seeded in-memory demo content provider, and in-memory configuration, secret, and session stores. Run `npm --workspace=fullswing-cms run start` from the workspace root with `CMS_BOOTSTRAP_MODULE=./memory-composition.mjs`, then open `http://localhost:3000/dashboard`. The dashboard includes sample blog drafts and a sample page; edits are lost when the process restarts. This bypass is only for local testing; OneDrive still requires Entra authentication, and the local composition refuses to start when `NODE_ENV=production`.
+
+To save content into the blog workspace, start the CMS with the file composition selected. In PowerShell, from the repository root:
+
+```powershell
+$env:CMS_BOOTSTRAP_MODULE = './file-composition.mjs'
+npm --workspace=fullswing-cms run start
+```
+
+The initial website public directory is `apps/fullswing-blog/public` and can be changed on the Configuration page. Blogs are stored as Markdown/JSON pairs in `blog/<year>/`; HTML pages are stored as HTML/JSON pairs in `pages/<year>/`, with the year taken from the metadata date. The CMS can edit those HTML pages, but the current blog generator does not discover or publish HTML page pairs from `public/pages/`. Configuration, sessions, and secrets in this local composition remain in memory and reset when the process restarts.
 
 For deployment, provide a separate `CMS_BOOTSTRAP_MODULE` ESM module exporting `createCmsDependencies()` and use durable, access-controlled adapters as described above. Startup fails with a generic message if the composition is missing or invalid; adapter errors and credential values are not printed.
 
@@ -38,7 +47,7 @@ The Configuration page displays saved non-secret values and only whether the Git
 - `/login` and `/auth/callback`: Microsoft Entra sign-in.
 - `/dashboard`: searchable and paginated blog/page summaries.
 - `/blogs/new` and `/blogs/:id/edit`: Markdown draft validation, preview, and save.
-- `/pages` and `/pages/:id`: page summaries and a read-only authoring placeholder; stored HTML is not rendered or executed.
+- `/pages` and `/pages/:id`: page summaries; file-backed storage supports HTML and metadata editing, while other providers may remain read-only. Stored HTML is not rendered or executed in the CMS.
 - `/configuration`: provider and GitHub workflow settings.
 - `POST /github/dispatch`: CSRF-protected dispatch of the saved workflow target.
 

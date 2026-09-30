@@ -17,6 +17,7 @@ export interface BlogContent extends ContentEntrySummary {
 
 export interface PageContent extends ContentEntrySummary {
   kind: 'page';
+  html?: string;
 }
 
 export type CmsContentEntry = BlogContent | PageContent;

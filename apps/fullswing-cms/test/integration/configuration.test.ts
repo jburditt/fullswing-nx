@@ -31,6 +31,7 @@ async function createConfigurationApp(): Promise<{ app: ReturnType<typeof create
   });
   const registry = new ContentProviderRegistry();
   registry.register('memory', (_settings, revision) => new FakeContentStorageProvider('memory', revision));
+  registry.register('file', (_settings, revision) => new FakeContentStorageProvider('file', revision));
   const selection = new ContentProviderSelection(registry);
   await selection.activate({ type: 'memory', revision: 'test-config-0', settings: {} });
   const service = new ConfigurationService(store, secrets, registry, selection);
@@ -70,6 +71,24 @@ test('configuration route renders accessible validation errors and preserves the
   assert.equal(response.statusCode, 400);
   assert.match(response.body, /role="alert"/);
   assert.equal((await store.read())?.revision, 'test-config-0');
+});
+
+test('configuration saves the local website public directory', async () => {
+  const { app, cookie, store } = await createConfigurationApp();
+  const response = await app.inject({
+    method: 'POST',
+    url: '/configuration',
+    headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    payload: new URLSearchParams({
+      _csrf: 'csrf-config', expectedRevision: 'test-config-0', providerType: 'file',
+      publicDirectory: 'C:\\site\\public',
+      owner: 'fullswing', repository: 'blog', workflow: 'publish.yml', ref: 'main', inputs: '{}', githubToken: '',
+    }).toString(),
+  });
+  await app.close();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal((await store.read())?.contentProvider.settings.publicDirectory, 'C:\\site\\public');
 });
 
 test('configuration POST requires CSRF verification', async () => {

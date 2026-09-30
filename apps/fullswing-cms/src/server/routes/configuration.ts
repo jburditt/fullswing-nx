@@ -8,6 +8,7 @@ export function registerConfigurationRoutes(app: FastifyInstance, service: Confi
   app.get('/configuration', async (request, reply) => {
     return reply.type('text/html; charset=utf-8').send(renderConfigurationPage({
       configuration: await service.readPublic(),
+      availableProviderTypes: service.availableProviderTypes(),
       csrfToken: request.cmsSession?.csrfToken ?? '',
     }));
   });
@@ -24,12 +25,14 @@ export function registerConfigurationRoutes(app: FastifyInstance, service: Confi
       const issues: ValidationIssue[] = [{ field: 'configuration', message: error.message }];
       return reply.code(error.statusCode).type('text/html; charset=utf-8').send(renderConfigurationPage({
         configuration: await service.readPublic(),
+        availableProviderTypes: service.availableProviderTypes(),
         csrfToken: request.cmsSession?.csrfToken ?? '',
         issues,
       }));
     }
     return reply.type('text/html; charset=utf-8').send(renderConfigurationPage({
       configuration: await service.readPublic(),
+      availableProviderTypes: service.availableProviderTypes(),
       csrfToken: request.cmsSession?.csrfToken ?? '',
       statusMessage: 'Configuration saved.',
     }));
@@ -57,6 +60,7 @@ function parseConfigurationDraft(request: FastifyRequest): ConfigurationDraft {
       settings: {
         driveId: textValue(body.driveId) ?? '',
         rootFolderId: textValue(body.rootFolderId) ?? '',
+        publicDirectory: textValue(body.publicDirectory) ?? '',
       },
     },
     githubWorkflow: {

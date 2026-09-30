@@ -22,7 +22,10 @@ async function createPageApp() {
   } satisfies PageContent);
   const app = createApp({ sessionCookieSecret: 'test-cookie-secret-that-is-at-least-32-characters', secureCookies: false });
   registerRequestGuards(app, { sessions, allowlist: new FakeAdminAllowlist() });
-  registerPageRoutes(app, { resolveContentProvider: async () => provider });
+  registerPageRoutes(app, {
+    resolveContentProvider: async () => provider,
+    getConfigRevision: async () => 'page-config',
+  });
   await app.ready();
   return { app, cookie: `fullswing_cms_session=${encodeURIComponent(app.signCookie('page-session'))}` };
 }

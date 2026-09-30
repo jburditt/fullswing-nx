@@ -16,6 +16,15 @@ export interface SaveBlogRequest {
   metadata: ContentMetadata;
 }
 
+export interface SavePageRequest {
+  id?: string;
+  basename: string;
+  expectedVersion?: string;
+  configRevision: string;
+  html: string;
+  metadata: ContentMetadata;
+}
+
 export interface ContentStorageProvider {
   readonly type: string;
   validateConfiguration(configuration: ProviderConfiguration): Promise<void>;
@@ -23,4 +32,5 @@ export interface ContentStorageProvider {
   readBlog(id: string): Promise<BlogContent | undefined>;
   readPage(id: string): Promise<PageContent | undefined>;
   saveBlog(request: SaveBlogRequest): Promise<BlogContent>;
+  savePage?(request: SavePageRequest): Promise<PageContent>;
 }

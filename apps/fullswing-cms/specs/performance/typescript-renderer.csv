@@ -1,0 +1,5 @@
+page,url,load_event_ms,dom_content_loaded_ms,transfer_size_bytes,status,notes
+Dashboard,http://127.0.0.1:3000/dashboard,63,45,3329,loaded,Navigation Timing API after page load
+Configuration,http://127.0.0.1:3000/configuration,70,46,3399,loaded,Navigation Timing API after page load
+Pages,http://127.0.0.1:3000/pages,46,46,1760,loaded,Navigation Timing API after page load
+Edit Blog Mockups,file:///C:/Users/jebbb/Repositories/Github/jburditt/fullswing-nx/apps/fullswing-cms/design-mockups.html,30,19,300,loaded,Navigation Timing API after page reload

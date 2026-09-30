@@ -113,7 +113,14 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
       return configuration.revision;
     },
   });
-  registerPageRoutes(app, { resolveContentProvider });
+  registerPageRoutes(app, {
+    resolveContentProvider,
+    getConfigRevision: async () => {
+      const configuration = await dependencies.configurationStore.read();
+      if (!configuration) throw new CmsError('configuration-invalid', 'Configure a content provider before editing pages.', 400);
+      return configuration.revision;
+    },
+  });
   registerConfigurationRoutes(app, configurationService);
   const github = new GitHubWorkflowDispatchAdapter(dependencies.secretStore);
   registerGitHubWorkflowRoutes(app, {

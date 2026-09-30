@@ -37,6 +37,10 @@ export class ContentProviderRegistry {
     return this.factories.has(type);
   }
 
+  types(): string[] {
+    return [...this.factories.keys()];
+  }
+
   async resolve(
     configuration: ProviderConfiguration,
     context?: ProviderResolutionContext,

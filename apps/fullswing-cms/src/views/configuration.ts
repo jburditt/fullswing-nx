@@ -4,6 +4,7 @@ import { escapeHtml, renderCmsLayout } from './layout.js';
 
 export interface ConfigurationViewOptions {
   configuration?: PublicCmsConfiguration;
+  availableProviderTypes?: readonly string[];
   csrfToken: string;
   issues?: readonly ValidationIssue[];
   statusMessage?: string;
@@ -15,10 +16,18 @@ export interface ConfigurationViewOptions {
 export function renderConfigurationPage(options: ConfigurationViewOptions): string {
   const configuration = options.configuration;
   const providerType = configuration?.contentProvider.type ?? 'onedrive';
-  const demoProviderOption = providerType === 'demo'
-    ? '<option value="demo" selected>Local demo</option>'
-    : '';
+  const providerNames: Record<string, string> = { demo: 'Local demo', file: 'Local files', onedrive: 'OneDrive' };
+  const providerTypes = new Set([...(options.availableProviderTypes ?? []), providerType]);
+  const providerOptions = [...providerTypes].map(type => `<option value="${escapeHtml(type)}"${providerType === type ? ' selected' : ''}>${escapeHtml(providerNames[type] ?? type)}</option>`).join('');
   const providerSettings = configuration?.contentProvider.settings ?? {};
+  const settingsGroups = [...providerTypes].map(type => {
+    const fields = type === 'onedrive'
+      ? `<label class="cms-field">Drive ID<input name="driveId" value="${escapeHtml(String(providerSettings.driveId ?? ''))}" /></label><label class="cms-field">Root folder ID<input name="rootFolderId" value="${escapeHtml(String(providerSettings.rootFolderId ?? ''))}" /></label>`
+      : type === 'file'
+        ? `<label class="cms-field cms-field--wide">Website public directory<input name="publicDirectory" value="${escapeHtml(String(providerSettings.publicDirectory ?? ''))}" /></label>`
+        : '<p class="cms-credential-state">This provider has no additional settings.</p>';
+    return `<div class="cms-settings-grid" data-provider-settings="${escapeHtml(type)}"${type === providerType ? '' : ' hidden'}>${fields}</div>`;
+  }).join('');
   const workflow = configuration?.githubWorkflow;
   const errors = options.issues?.length
     ? `<section class="cms-errors" role="alert"><h2>Configuration was not saved</h2><ul>${options.issues.map(issue => `<li><strong>${escapeHtml(issue.field)}:</strong> ${escapeHtml(issue.message)}</li>`).join('')}</ul></section>`
@@ -39,10 +48,8 @@ export function renderConfigurationPage(options: ConfigurationViewOptions): stri
     <input type="hidden" name="_csrf" value="${csrf}" />
     <input type="hidden" name="expectedRevision" value="${revision}" />
     <fieldset class="cms-settings-section"><legend>Content storage</legend><div class="cms-settings-grid">
-      <label class="cms-field">Provider<select name="providerType"><option value="onedrive"${providerType === 'onedrive' ? ' selected' : ''}>OneDrive</option>${demoProviderOption}</select></label>
-      <label class="cms-field">Drive ID<input name="driveId" value="${escapeHtml(String(providerSettings.driveId ?? ''))}" required /></label>
-      <label class="cms-field">Root folder ID<input name="rootFolderId" value="${escapeHtml(String(providerSettings.rootFolderId ?? ''))}" required /></label>
-    </div></fieldset>
+      <label class="cms-field">Provider<select name="providerType">${providerOptions}</select></label>
+    </div>${settingsGroups}</fieldset>
     <fieldset class="cms-settings-section"><legend>GitHub workflow</legend><div class="cms-settings-grid">
       <label class="cms-field">Owner<input name="owner" value="${escapeHtml(workflow?.owner ?? '')}" required /></label>
       <label class="cms-field">Repository<input name="repository" value="${escapeHtml(workflow?.repository ?? '')}" required /></label>

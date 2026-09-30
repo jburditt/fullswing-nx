@@ -1,6 +1,20 @@
 const form = document.getElementById('blog-editor-form');
 const markdown = document.getElementById('blog-markdown');
 const preview = document.querySelector('[data-markdown-preview]');
+const providerSelect = document.querySelector('[name="providerType"]');
+
+if (providerSelect) {
+  const settingsGroups = document.querySelectorAll('[data-provider-settings]');
+  const updateProviderSettings = () => {
+    settingsGroups.forEach(group => {
+      const active = group.getAttribute('data-provider-settings') === providerSelect.value;
+      group.hidden = !active;
+      group.querySelectorAll('input').forEach(input => { input.disabled = !active; });
+    });
+  };
+  providerSelect.addEventListener('change', updateProviderSettings);
+  updateProviderSettings();
+}
 
 if (form && preview) {
   const title = form.querySelector('[data-preview-title]');

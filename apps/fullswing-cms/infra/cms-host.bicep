@@ -60,7 +60,7 @@ resource cmsApp 'Microsoft.Web/sites@2022-09-01' = {
     serverFarmId: hostingPlan.id
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'NODE|20-lts'
+      linuxFxVersion: 'NODE|24-lts'
       appCommandLine: 'node apps/fullswing-cms/.build/src/index.js'
       alwaysOn: false
       ftpsState: 'Disabled'

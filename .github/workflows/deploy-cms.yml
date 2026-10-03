@@ -23,7 +23,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       AZURE_LOCATION: westus2
       CMS_RESOURCE_GROUP: rg-fullswing-cms
-      CONTENT_RESOURCE_GROUP: rg-fullswing-content
+      CONTENT_RESOURCE_GROUP: rg-fullswing-cms
       CMS_APP_NAME: ${{ vars.CMS_APP_NAME }}
       CMS_ENTRA_CLIENT_ID: ${{ vars.CMS_ENTRA_CLIENT_ID }}
       CMS_ADMIN_OBJECT_IDS: ${{ vars.CMS_ADMIN_OBJECT_IDS }}
@@ -35,14 +35,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
           cache: npm
 
       - name: Install, test, and compile workspace packages
         run: |
           npm ci
-          npm exec nx run fullswing-cms:test
-          npm exec nx run-many -t compile --projects=content-model,markdown-renderer,fullswing-cms
+            npm exec nx -- run-many -t compile --projects=content-model,markdown-renderer
+            npm exec nx run fullswing-cms:test
 
       - name: Prepare production package
         run: |

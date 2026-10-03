@@ -26,14 +26,14 @@ jobs:
       AZURE_ENV_NAME: fullswing-blog
       AZURE_LOCATION: westus2
       AZURE_RESOURCE_GROUP: rg-fullswing-blog
-      CMS_CONTENT_RESOURCE_GROUP: rg-fullswing-content
+      CMS_CONTENT_RESOURCE_GROUP: rg-fullswing-cms
       BLOG_STORAGE_CONTAINER_NAME: fullswing-cms-state
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Install workspace dependencies
         run: npm ci
@@ -41,7 +41,7 @@ jobs:
       - name: Verify Blob content sync and compile static-site dependencies
         run: |
           node --test scripts/sync-blog-content.test.mjs
-          npm exec nx run-many -t compile --projects=content-model,markdown-renderer,fullswing-blog
+          npm exec nx -- run-many -t compile --projects=content-model,markdown-renderer,fullswing-blog
 
       - uses: Azure/setup-azd@v2
 

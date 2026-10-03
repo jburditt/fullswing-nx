@@ -315,11 +315,31 @@ Each story has a separate independent test criterion above. Automated tests are 
 - [x] T091 Add sync tests for prefix mapping, stale-file removal, malformed/empty pairs, and preservation of the previous directory on download failure in `scripts/sync-blog-content.test.mjs`.
 - [x] T092 Implement the Azure CLI-based Blob sync utility with path validation and staged directory replacement in `scripts/sync-blog-content.mjs`.
 - [x] T093 Add an App Service production start command that does not require the gitignored `.env` file in `apps/fullswing-cms/package.json`.
-- [x] T094 Add separate content-storage and CMS-host Bicep templates for `rg-fullswing-content` and `rg-fullswing-cms`, including scoped Blob Data Reader access for the static build identity in `apps/fullswing-cms/infra/content-storage.bicep` and `apps/fullswing-cms/infra/cms-host.bicep`.
+- [x] T094 Add content-storage and CMS-host Bicep templates targeting the shared `rg-fullswing-cms` resource group, including scoped Blob Data Reader access for the static build identity in `apps/fullswing-cms/infra/content-storage.bicep` and `apps/fullswing-cms/infra/cms-host.bicep`.
 - [x] T095 Add a manually triggered CMS workflow to test/build the workspace, provision persistent Blob and Linux F1 resources, optionally seed an empty blog prefix, and deploy the compiled package without a destroy path in `.github/workflows/deploy-cms.yml`.
 - [x] T096 Update the static deployment workflow to compile workspace libraries and sync Blob blogs into `apps/fullswing-blog/public/blog/` before the existing static build in `.github/workflows/deploy.yml`.
-- [x] T097 Document GitHub settings, Entra callback, RBAC prerequisites, seed procedure, separate resource groups, and tier limitations in `apps/fullswing-cms/README.md`, `specs/001-admin-content-management/quickstart.md`, and the feature design artifacts.
+- [x] T097 Document GitHub settings, Entra callback, RBAC prerequisites, seed procedure, CMS/blog resource-group boundary, and tier limitations in `apps/fullswing-cms/README.md`, `specs/001-admin-content-management/quickstart.md`, and the feature design artifacts.
 - [x] T098 Run the sync utility tests, CMS tests, static-blog verification, and Bicep diagnostics; identify GitHub repository settings as prerequisites for T099.
-- [ ] T099 Configure the GitHub repository variables/secrets, Entra redirect URI, and Azure federated/RBAC permissions; manually deploy the CMS with `seed_initial_content=true`; verify CMS login, Blob saves, and the subsequent static Blob-to-site build.
+- [ ] T099 After merging the follow-up CI/runtime and resource-group changes, rerun the CMS workflow with `seed_initial_content=true`; verify CMS login, Blob saves, and the subsequent static Blob-to-site build.
 
 **Operational boundary**: Local tests validate package behavior but do not provision Azure or exercise live Entra/Blob access. Task T099 remains a manual cloud deployment and smoke-test gate. Blob is free only within the applicable first-12-month offer; App Service F1 has strict CPU, bandwidth, and availability limits.
+
+## Phase 14: CMS Resource Group Consolidation
+
+**Purpose**: Keep the App Service host, Blob content account, and container under `rg-fullswing-cms` while preserving the existing static blog in its separate `rg-fullswing-blog` lifecycle.
+
+- [x] T102 Update CMS and static deployment workflows to provision and discover the content account in `rg-fullswing-cms` in `.github/workflows/deploy-cms.yml` and `.github/workflows/deploy.yml`.
+- [x] T103 Align deployment documentation and resource-group requirements with the consolidated CMS group in `apps/fullswing-cms/README.md` and the feature design artifacts.
+
+**Operational boundary**: Neither deployment workflow deletes `rg-fullswing-cms`. Static-blog `azd down` remains scoped to `rg-fullswing-blog`.
+
+## Phase 15: First Deployment CI Compatibility
+
+**Purpose**: Make the clean GitHub runner compile workspace-linked packages before CMS compilation and use the Node runtime required by current Azure dependencies.
+
+- [x] T104 Raise the CMS engine requirement to Node 22.12+, use Node 24 LTS in App Service and deployment workflows, and synchronize `package-lock.json`.
+- [x] T105 Compile `content-model` and `markdown-renderer` before `fullswing-cms:test`; forward Nx `run-many` flags using npm's `--` separator in CMS and static workflows.
+- [x] T106 Update the CMS README, quickstart, and implementation plan to specify Node 24 LTS for Azure deployment.
+- [x] T107 Reproduce the clean shared-library build order and verify CMS tests, static-blog tests/build, sync tests, Bicep diagnostics, and diff formatting.
+
+**Operational boundary**: The first dispatched CMS run failed in CI before Azure provisioning because linked library outputs were not built first. No Azure resources were created by that run. T099 remains the post-merge deployment and live smoke-test gate.

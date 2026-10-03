@@ -1,15 +1,19 @@
 {
   "chat.tools.terminal.autoApprove": {
     "/^Get ChildItem( .*)?$/": true,
-    "/^node --test( .*)?$/": true,
     "npm test": true,
-    "/^npm test$/": true,
+    "/^npm test /": true,
     "/^npm run test( .*)?$/": true,
     "npm run compile": true,
     "/^npm run compile( .*)?$/": true,
     "/^npm run build( .*)?$/": true,
-    "/^git diff( .*)$/": true,
-    "/^git diff --check( .*)$/": true,
+    "/^node --test /": true,
+    "git branch --show-current": true,
+    "/^git branch --show-current$/": true,
+    "/^git diff /": true,
+    "git diff --check": true,
+    "/^git diff( .*)?$/": true,
+    "git diff --stat": true,
     "/^git status( .*)?$/": true,
     "git status --short": true
   }

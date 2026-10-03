@@ -21,7 +21,8 @@ jobs:
       AZURE_CLIENT_OBJECT_ID: ${{ vars.AZURE_CLIENT_OBJECT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_LOCATION: westus2
+      AZURE_LOCATION: canadacentral
+      CMS_HOST_LOCATION: canadacentral
       CMS_RESOURCE_GROUP: rg-fullswing-cms
       CONTENT_RESOURCE_GROUP: rg-fullswing-content
       CMS_APP_NAME: ${{ vars.CMS_APP_NAME }}
@@ -113,6 +114,7 @@ jobs:
             --resource-group "$CMS_RESOURCE_GROUP" \
             --template-file apps/fullswing-cms/infra/cms-host.bicep \
             --parameters \
+              location="$CMS_HOST_LOCATION" \
               cmsAppName="$CMS_APP_NAME" \
               blobConnectionString="$CMS_BLOB_CONNECTION_STRING" \
               blobContainerName="$CMS_BLOB_CONTAINER_NAME" \

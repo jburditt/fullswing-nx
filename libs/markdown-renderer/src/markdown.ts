@@ -318,6 +318,9 @@ export async function renderMarkdown(source: string, options: MarkdownRenderOpti
       }
     },
     renderer: {
+      checkbox({ checked }: Tokens.Checkbox): string {
+        return `<input type="checkbox"${checked ? ' checked' : ''}>`;
+      },
       code(token: Tokens.Code): string {
         const diagram = prerenderedDiagrams.get(token);
         if (diagram !== undefined) {

@@ -17,6 +17,14 @@ test('renderMarkdown preserves highlighted line numbers and ranges', async () =>
   ]);
 });
 
+test('renderMarkdown renders interactive task list checkboxes', async () => {
+  const html = await renderMarkdown('- [ ] open\n- [x] done');
+
+  assert.match(html, /<input type="checkbox"> open/);
+  assert.match(html, /<input type="checkbox" checked> done/);
+  assert.doesNotMatch(html, /disabled/);
+});
+
 test('renderMarkdown escapes unknown-language code and Mermaid source', async () => {
   const code = await renderMarkdown('```unknown\n<script>alert(1)</script>\n```');
   const diagram = await renderMarkdown('```mermaid\ngraph TD;\n<script>alert(1)</script>\n```');

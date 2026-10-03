@@ -35,9 +35,9 @@
 
 ### Azure App Service and static publishing
 
-**Decision**: Host Fastify on Linux App Service F1 and keep its Blob content account together in the dedicated CMS resource group `rg-fullswing-cms`; leave the static-site resource group `rg-fullswing-blog` unchanged. A manual GitHub Actions workflow provisions/deploys the CMS with federated Azure login. The existing static-blog workflow uses its OIDC principal with container-scoped read access to list/download the Blob blog prefix before `azd deploy` runs the repository-based static build.
+**Decision**: Host Fastify on Linux App Service F1 in `rg-fullswing-cms` and keep the persistent Blob content account in a dedicated `rg-fullswing-content`; leave the static-site resource group `rg-fullswing-blog` unchanged. A manual GitHub Actions workflow provisions/deploys the CMS with federated Azure login. The existing static-blog workflow uses its OIDC principal with container-scoped read access to list/download the Blob blog prefix before `azd deploy` runs the repository-based static build.
 
-**Rationale**: App Service can run the current Node/Fastify server without converting routes to Functions. A dedicated CMS resource group makes the host and its persistent content easy to manage together while preventing the current blog `azd down` lifecycle from deleting CMS content. GitHub OIDC and data-plane RBAC avoid storing a storage key in the static-blog workflow.
+**Rationale**: App Service can run the current Node/Fastify server without converting routes to Functions. A dedicated persistent-content resource group protects the Blob account from both CMS and blog app lifecycle changes, while the current blog `azd down` remains scoped to `rg-fullswing-blog`. GitHub OIDC and data-plane RBAC avoid storing a storage key in the static-blog workflow.
 
 **Operational constraints**: F1 is a shared, quota-limited plan without custom domains or SLA; restarts lose in-memory sessions. Blob content is first seeded only when explicitly requested and only if the blog prefix is empty. The static sync downloads to a staging directory, validates complete Markdown/JSON pairs, then swaps the local blog directory so a failed or empty fetch cannot publish stale/partial output. The Blob free offer is limited to its published first-12-month eligibility; budgets must account for later charges.
 

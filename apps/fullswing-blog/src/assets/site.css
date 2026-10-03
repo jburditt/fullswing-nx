@@ -246,6 +246,50 @@ body {
   max-width: 100%;
 }
 
+.page-content details.accordion-item {
+  margin: 0;
+  padding: 0.15rem 0;
+}
+
+.page-content details.accordion-item > summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  color: var(--accent);
+  cursor: pointer;
+  list-style: none;
+}
+
+.page-content details.accordion-item > summary::-webkit-details-marker {
+  display: none;
+}
+
+.page-content details.accordion-item > summary::after {
+  flex: none;
+  color: var(--accent);
+  content: "+";
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.page-content details.accordion-item[open] > summary::after {
+  content: "\2212";
+}
+
+.page-content details.accordion-item > summary:focus-visible {
+  border-radius: 0.2rem;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.page-content details.accordion-item > p {
+  margin: 0 2.4rem 1rem 0;
+  color: var(--text-muted);
+}
+
 .page-content li:has(> input[type="checkbox"]),
 .page-content li:has(> p > input[type="checkbox"]) {
   list-style: none;

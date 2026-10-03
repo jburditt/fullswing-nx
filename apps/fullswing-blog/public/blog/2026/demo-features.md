@@ -6,6 +6,35 @@ This is a simple demo of the blog features
 - Supports **bold**, italic, and __underscore__
 - Supports markdown files, html, and typescript-rendered pages
 
+## Accordions
+
+<details class="accordion-item" open>
+  <summary><strong>How does a Markdown accordion work?</strong></summary>
+
+  <p>Wrap the expandable content in an HTML <code>&lt;details&gt;</code> element and use <code>&lt;summary&gt;</code> for its clickable label. The browser provides the expand and collapse behavior.</p>
+</details>
+
+<details class="accordion-item">
+  <summary><strong>Can an accordion start expanded?</strong></summary>
+
+  <p>Yes. Add the <code>open</code> attribute to the <code>&lt;details&gt;</code> element.</p>
+</details>
+
+<details class="accordion-item">
+  <summary><strong>Does it need JavaScript?</strong></summary>
+
+  <p>No. Native details elements work without JavaScript and support keyboard interaction.</p>
+</details>
+
+The code in the markdown file:
+```html
+<details>
+  <summary>Click to expand</summary>
+
+  <p>Content shown when expanded.</p>
+</details>
+```
+
 ## Persistent Checkboxes
 - [ ] Todo item 1
 - [ ] Todo item 2
@@ -72,4 +101,3 @@ architecture-beta
     wordpress_php:L <-- R:wordpress_nginx
     wordpress_certbot:T --> B:wordpress_nginx
 ```
-

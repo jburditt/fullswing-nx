@@ -6,6 +6,15 @@ This is a simple demo of the blog features
 - Supports **bold**, italic, and __underscore__
 - Supports markdown files, html, and typescript-rendered pages
 
+## Persistent Checkboxes
+- [ ] Todo item 1
+- [ ] Todo item 2
+- [ ] Todo item 3
+- [ ] Todo item 4
+- [ ] Todo item 5
+  - [ ] Todo sub item 1
+  - [ ] Todo sub item 2
+
 ## Code Blocks
 
 Code block with line highlighting

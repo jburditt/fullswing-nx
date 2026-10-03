@@ -246,6 +246,11 @@ body {
   max-width: 100%;
 }
 
+.page-content li:has(> input[type="checkbox"]),
+.page-content li:has(> p > input[type="checkbox"]) {
+  list-style: none;
+}
+
 .page-content pre {
   overflow-x: auto;
 }

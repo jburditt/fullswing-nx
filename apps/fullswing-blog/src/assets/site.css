@@ -304,11 +304,32 @@ body {
   background: rgba(255, 240, 193, 0.18);
 }
 
-pre.mermaid {
+.mermaid-diagram {
   background: var(--surface-muted);
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
+  margin: 1rem 0;
+  overflow-x: auto;
   padding: 1rem;
+  text-align: center;
+}
+
+.mermaid-diagram svg {
+  height: auto;
+  max-width: 100%;
+}
+
+.mermaid-diagram__dark {
+  display: none;
+}
+
+/* Dark variant is shown only under [data-theme="dark"]; add a prefers-color-scheme rule when site dark mode ships. */
+:root[data-theme="dark"] .mermaid-diagram__light {
+  display: none;
+}
+
+:root[data-theme="dark"] .mermaid-diagram__dark {
+  display: block;
 }
 
 [hidden] {

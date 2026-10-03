@@ -26,6 +26,28 @@ test('renderMarkdown escapes unknown-language code and Mermaid source', async ()
   assert.doesNotMatch(`${code}${diagram}`, /<script>alert/);
 });
 
+test('renderMarkdown embeds prerendered Mermaid output from the renderMermaid hook', async () => {
+  const sources: string[] = [];
+  const html = await renderMarkdown('```mermaid\ngraph TD;\nA-->B;\n```\n\n```ts\nconst a = 1;\n```', {
+    renderMermaid: async source => {
+      sources.push(source);
+      return '<figure class="mermaid-diagram"><svg></svg></figure>';
+    },
+  });
+
+  assert.deepEqual(sources, ['graph TD;\nA-->B;']);
+  assert.match(html, /<figure class="mermaid-diagram"><svg><\/svg><\/figure>/);
+  assert.doesNotMatch(html, /class="mermaid"/);
+  assert.match(html, /code-block/);
+});
+
+test('renderMarkdown propagates Mermaid prerender failures', async () => {
+  await assert.rejects(
+    renderMarkdown('```mermaid\nnot a diagram\n```', { renderMermaid: async () => { throw new Error('bad diagram'); } }),
+    /bad diagram/
+  );
+});
+
 test('renderMarkdown fetches bounded text from the default approved source host', async () => {
   const sourceUrl = 'https://raw.githubusercontent.com/example/project/abc123/app.ts';
   let fetchCount = 0;

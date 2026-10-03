@@ -301,19 +301,6 @@ test('renderLayout should resolve the header logo from the generated asset direc
   assert.match(html, /href=\"\.\.\/\.\.\/favicon\.png\"/);
 });
 
-test('renderLayout should load Mermaid for pages containing diagram blocks', () => {
-  const html = renderLayout({
-    route: '/blog/example',
-    assetPrefix: '../../',
-    pageTitle: 'Diagram page',
-    title: 'Diagram page',
-    content: '<pre class="mermaid">graph TD;</pre>',
-  });
-
-  assert.match(html, /mermaid@11\.12\.0\/dist\/mermaid\.min\.js/);
-  assert.match(html, /mermaid\?\.initialize\(\{\s*startOnLoad: false,\s*securityLevel: 'strict'\s*\}\)/);
-});
-
 test('getRelativeHref should resolve nested routes relative to generated output directories', () => {
   assert.equal(getRelativeHref('/blog/example', '/'), '../../');
   assert.equal(getRelativeHref('/blog/example', '/sitemap'), '../../sitemap/');

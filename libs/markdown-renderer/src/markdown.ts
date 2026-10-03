@@ -22,6 +22,8 @@ export interface MarkdownRenderOptions {
   maxSourceBytes?: number;
   sourceTimeoutMs?: number;
   articleRoute?: string;
+  /** Prerenders a Mermaid diagram to static HTML (e.g. inline SVG). When omitted, source is emitted for client rendering. */
+  renderMermaid?: (source: string) => Promise<string>;
 }
 
 interface CodeFenceOptions {
@@ -293,10 +295,16 @@ export async function renderMarkdown(source: string, options: MarkdownRenderOpti
     gfm: true,
   });
 
+  const prerenderedDiagrams = new WeakMap<object, string>();
+
   marked.use({
     async: true,
     walkTokens: async token => {
       if (token.type === 'code') {
+        if (options.renderMermaid && parseCodeFenceInfo(token.lang).language === 'mermaid') {
+          prerenderedDiagrams.set(token, await options.renderMermaid(token.text.trimEnd()));
+          return;
+        }
         const sourceUrl = parseCodeFenceInfo(token.lang).sourceUrl;
         if (sourceUrl) {
           token.text = await getSourceText(sourceUrl, options, sourceCache);
@@ -305,6 +313,10 @@ export async function renderMarkdown(source: string, options: MarkdownRenderOpti
     },
     renderer: {
       code(token: Tokens.Code): string {
+        const diagram = prerenderedDiagrams.get(token);
+        if (diagram !== undefined) {
+          return diagram;
+        }
         return renderCodeBlock(token.text, token.lang);
       },
     },

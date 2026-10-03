@@ -33,9 +33,6 @@ function renderCategoryPills(categories: string[]): string {
 export function renderLayout(options: LayoutOptions): string {
   const { route, assetPrefix, pageTitle, title, content, author, date, categories = [] } = options;
   const escapedAssetPrefix = escapeHtml(assetPrefix);
-  const mermaidRuntime = content.includes('class="mermaid"') ? `
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.min.js"></script>
-    <script>window.mermaid?.initialize({ startOnLoad: false, securityLevel: 'strict' });</script>` : '';
   const headingMeta = author || date ? `
     <div class="page-meta post-byline">
       ${author ? `<img class="post-byline__avatar" src="${escapedAssetPrefix}assets/avatar.png" alt="Portrait of ${escapeHtml(author)}" />` : ''}
@@ -86,7 +83,6 @@ export function renderLayout(options: LayoutOptions): string {
       </main>
       <p id="copy-status" class="visually-hidden" role="status" aria-live="polite"></p>
     </div>
-    ${mermaidRuntime}
     <script type="module" src="${escapedAssetPrefix}assets/site.js"></script>
   </body>
 </html>`;

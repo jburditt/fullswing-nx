@@ -108,11 +108,11 @@ The sidecar JSON must use route `/page/<basename>`.
 - Remote source code blocks using `source=https://raw.githubusercontent.com/...` fence directives; use version-specific URLs when reproducible output matters
 - Minimal client-side category filtering and copy-to-clipboard behavior
 - Header social navigation uses accessible GitHub and LinkedIn SVG icons with lighter resting fills and darker hover/focus states
-- Mermaid diagrams: Pages containing Mermaid blocks load the pinned Mermaid CDN runtime and initialize it with restrictive defaults. Blocks render from escaped `<pre class="mermaid">...</pre>` source, while `assets/site.js` auto-runs `window.mermaid.run({ nodes })` or exposes `window.typescriptBlog.enhanceMermaid(enhancer)` for a host that loads Mermaid later. Enhancement failures leave the source readable and are isolated per block.
+- Mermaid diagrams: ```mermaid fences are prerendered at build time to inline SVG (`<figure class="mermaid-diagram">`) in both light and dark themes; CSS shows the dark variant under `:root[data-theme="dark"]` using headless Chromium via `@mermaid-js/mermaid-cli`. The deployed site ships no Mermaid runtime or JavaScript for diagrams, and an invalid diagram fails the build.
 
 ## Limitations
 
-- Mermaid is loaded from a pinned CDN URL rather than bundled into the generator. If the runtime is unavailable, the generated HTML remains readable source. Hosts control any alternate loading, configuration, security policy, and CSP. Authors should add Mermaid `accTitle` and `accDescr` entries when a diagram conveys important information.
+- Building articles with Mermaid diagrams requires a Chromium install for Puppeteer (`npx puppeteer browsers install chrome`; on CI `--no-sandbox` is used when `CI` is set). Authors should add Mermaid `accTitle` and `accDescr` entries when a diagram conveys important information.
 - Syntax highlighting supports the Prism languages imported in `apps/fullswing-blog/src/lib/markdown.ts`. Additional languages can be added there if needed.
 - Remote code sources are retrieved during the build from approved HTTPS hosts, rendered into the static page, and exposed with a source link. Unavailable, unsafe, non-text, or oversized sources fail the build rather than producing an incomplete block.
 

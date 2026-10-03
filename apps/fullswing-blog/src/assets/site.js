@@ -108,48 +108,7 @@ export function setupCopyButtons(
   });
 }
 
-export function setupMermaidExtensionPoint(doc = document, win = window) {
-  const mermaidBlocks = [...doc.querySelectorAll('pre.mermaid')];
-  if (mermaidBlocks.length === 0) {
-    return;
-  }
-
-  const enhanceMermaidBlocks = async enhancer => {
-    const sources = mermaidBlocks.map(block => block.textContent);
-
-    try {
-      await enhancer(mermaidBlocks);
-      return;
-    } catch (error) {
-      mermaidBlocks.forEach((block, index) => {
-        block.textContent = sources[index];
-      });
-    }
-
-    await Promise.all(mermaidBlocks.map(async (block, index) => {
-      try {
-        await enhancer([block]);
-      } catch (error) {
-        block.textContent = sources[index];
-      }
-    }));
-  };
-
-  const runtime = win.typescriptBlog ?? {};
-  runtime.enhanceMermaid = enhancer => {
-    if (typeof enhancer === 'function') {
-      return enhanceMermaidBlocks(enhancer);
-    }
-  };
-  win.typescriptBlog = runtime;
-
-  if (win.mermaid?.run) {
-    void enhanceMermaidBlocks(nodes => win.mermaid.run({ nodes }));
-  }
-}
-
 if (typeof document !== 'undefined' && typeof window !== 'undefined') {
   setupCategoryFilters();
   setupCopyButtons();
-  setupMermaidExtensionPoint();
 }

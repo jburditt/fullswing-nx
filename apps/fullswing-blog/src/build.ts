@@ -6,6 +6,7 @@ import { discoverBlogs, discoverPages } from './lib/discovery.js';
 import { escapeHtml } from './lib/html.js';
 import { renderLayout } from './lib/layout.js';
 import { renderMarkdown } from './lib/markdown.js';
+import { launchMermaidPrerenderer } from './lib/mermaid.js';
 import { ContentRepository } from '@fullswing/content-model';
 import { renderHomePage, renderSitemapPage } from './lib/renderers.js';
 import { getAssetPrefix, getOutputPath } from './lib/routes.js';
@@ -43,23 +44,40 @@ async function build(): Promise<void> {
 
   await copyProjectAssets(publicDirectory, sourceAssetsDirectory, distDirectory);
 
+  const blogMarkdown = new Map<string, string>();
   for (const blog of repository.getBlogs()) {
-    const markdown = await readFile(blog.markdownPath, 'utf8');
-    const content = await renderMarkdown(markdown, { sourceCache, articleRoute: blog.route });
-    await writeRoute(
-      blog.route,
-      distDirectory,
-      renderLayout({
-        route: blog.route,
-        assetPrefix: getAssetPrefix(blog.route),
-        pageTitle: `${blog.title} | Blog`,
-        title: blog.title,
-        author: blog.author,
-        date: blog.dateValue,
-        categories: blog.categories,
-        content,
-      })
-    );
+    blogMarkdown.set(blog.route, await readFile(blog.markdownPath, 'utf8'));
+  }
+
+  // Only launch Chromium when at least one article contains a diagram.
+  const needsMermaid = [...blogMarkdown.values()].some(markdown => /^\s*(```|~~~)\s*mermaid\b/m.test(markdown));
+  const mermaid = needsMermaid ? await launchMermaidPrerenderer() : undefined;
+
+  try {
+    for (const blog of repository.getBlogs()) {
+      const markdown = blogMarkdown.get(blog.route)!;
+      const content = await renderMarkdown(markdown, {
+        sourceCache,
+        articleRoute: blog.route,
+        renderMermaid: mermaid ? source => mermaid.render(source) : undefined,
+      });
+      await writeRoute(
+        blog.route,
+        distDirectory,
+        renderLayout({
+          route: blog.route,
+          assetPrefix: getAssetPrefix(blog.route),
+          pageTitle: `${blog.title} | Blog`,
+          title: blog.title,
+          author: blog.author,
+          date: blog.dateValue,
+          categories: blog.categories,
+          content,
+        })
+      );
+    }
+  } finally {
+    await mermaid?.close();
   }
 
   for (const page of repository.getPages()) {

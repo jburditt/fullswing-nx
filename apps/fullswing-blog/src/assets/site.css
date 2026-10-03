@@ -249,6 +249,12 @@ body {
 .page-content li:has(> input[type="checkbox"]),
 .page-content li:has(> p > input[type="checkbox"]) {
   list-style: none;
+  margin-left: -1rem;
+}
+
+.page-content li > input[type="checkbox"],
+.page-content li > p > input[type="checkbox"] {
+  margin-left: 0;
 }
 
 .page-content pre {

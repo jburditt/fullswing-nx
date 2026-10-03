@@ -55,7 +55,7 @@ Keep the key outside the Blob container and back it up securely. Verify the cont
 1. Configure GitHub repository variables `AZURE_CLIENT_ID`, `AZURE_CLIENT_OBJECT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `CMS_APP_NAME`, `CMS_ENTRA_CLIENT_ID`, and `CMS_ADMIN_OBJECT_IDS`.
 2. Configure GitHub secrets `CMS_ENTRA_CLIENT_SECRET`, `CMS_SECRET_ENCRYPTION_KEY` (base64-encoded random 32-byte key), and `CMS_SESSION_COOKIE_SECRET` (at least 32 random characters).
 3. Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` in the CMS Entra application as a web redirect URI. Use a separate CMS Entra app from the GitHub deployment principal.
-4. Grant the GitHub deployment principal permission to create resources in `rg-fullswing-cms` and assign `Storage Blob Data Reader` on the private container. The existing `rg-fullswing-blog` remains independent.
+4. Grant the GitHub deployment principal permission to create `rg-fullswing-cms` and `rg-fullswing-content`, and assign `Storage Blob Data Reader` on the private container. The existing `rg-fullswing-blog` remains independent.
 5. Run `.github/workflows/deploy-cms.yml` manually. On the first run, enable `seed_initial_content` to copy `apps/fullswing-blog/public/blog/` into an empty `content/blog/` prefix. Later runs do not overwrite or reseed content.
 6. Set up the CMS through its Configuration page, then deploy the static blog. Its workflow syncs Blob blogs into `apps/fullswing-blog/public/blog/` before the existing static build. The sync removes stale local files and fails closed if Blob returns an empty or incomplete set.
 
@@ -67,8 +67,8 @@ Only for a non-Azure composition that registers OneDrive: configure a test tenan
 
 ## First Azure Deployment
 
-Follow the GitHub repository variables/secrets and Entra callback setup in the [CMS README](../../README.md#first-azure-deployment). Ensure the Azure federated principal can deploy resources in `rg-fullswing-cms` and assign the container-scoped `Storage Blob Data Reader` role. Run **Deploy Fullswing CMS to Azure App Service** manually with `seed_initial_content` enabled for the initial migration; later deployments must leave it disabled. The workflow has no destroy action. CMS content and host share `rg-fullswing-cms`, which remains separate from `rg-fullswing-blog`.
+Follow the GitHub repository variables/secrets and Entra callback setup in the [CMS README](../../README.md#first-azure-deployment). Ensure the Azure federated principal can deploy the App Service in `rg-fullswing-cms`, storage in `rg-fullswing-content`, and assign the container-scoped `Storage Blob Data Reader` role. Run **Deploy Fullswing CMS to Azure App Service** manually with `seed_initial_content` enabled for the initial migration; later deployments must leave it disabled. The workflow has no destroy action; both app groups remain separate from persistent content.
 
-After the CMS smoke test passes, run the static-blog deployment. It discovers the storage account in `rg-fullswing-cms`, downloads Blob blog pairs before the existing build, and fails closed when the Blob prefix is empty or incomplete. The blog deployment's existing `down` action affects only `rg-fullswing-blog`.
+After the CMS smoke test passes, run the static-blog deployment. It discovers the storage account in `rg-fullswing-content`, downloads Blob blog pairs before the existing build, and fails closed when the Blob prefix is empty or incomplete. The blog deployment's existing `down` action affects only `rg-fullswing-blog`.
 
 See [the storage contract](contracts/content-storage-provider.md), [the admin UI contract](contracts/admin-ui.md), and [the GitHub dispatch contract](contracts/github-workflow-dispatch.md) for integration and route behavior.

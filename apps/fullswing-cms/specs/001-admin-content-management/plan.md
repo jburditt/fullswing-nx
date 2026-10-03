@@ -18,7 +18,7 @@ Build the CMS as a server-rendered Node.js application whose use cases depend on
 
 **Testing**: TypeScript compile plus native `node:test` through Nx; CMS service tests, storage-provider contract tests, mocked Graph integration tests, and Entra/session tests with test doubles
 
-**Target Platform**: Node.js 22.12+ server with browser-accessible, server-rendered HTML. The Azure deployment uses Node 24 LTS on Linux App Service F1 and persistent Blob storage together in `rg-fullswing-cms`; the static blog remains in `rg-fullswing-blog`.
+**Target Platform**: Node.js 22.12+ server with browser-accessible, server-rendered HTML. The Azure deployment uses Node 24 LTS on Linux App Service F1 in `rg-fullswing-cms`; persistent Blob storage is isolated in `rg-fullswing-content`, and the static blog remains in `rg-fullswing-blog`.
 
 **Project Type**: Server-rendered web application in the existing `apps/fullswing-cms` workspace project
 
@@ -30,7 +30,7 @@ Build the CMS as a server-rendered Node.js application whose use cases depend on
 
 **Identity/Storage Access**: Microsoft Entra ID authenticates each administrator. The Azure Blob composition uses OIDC identity scopes only and accesses Blob with its configured storage credential; it does not request Microsoft Graph file permissions. When another composition registers OneDrive, operations use the signed-in administrator's delegated permissions; app-only fallback is prohibited.
 
-**Deployment**: A manual GitHub Actions workflow provisions the F1 CMS host and persistent Blob account into `rg-fullswing-cms` using federated Azure login. A separate existing blog workflow uses its federated principal with container-scoped Blob read access to stage Markdown/JSON pairs into `apps/fullswing-blog/public/blog/` before the static build. Initial content seeding is an explicit opt-in, guarded to an empty prefix. `rg-fullswing-blog` remains an independent static-site lifecycle.
+**Deployment**: A manual GitHub Actions workflow provisions the F1 CMS host in `rg-fullswing-cms` and persistent Blob account in `rg-fullswing-content` using federated Azure login. A separate existing blog workflow uses its federated principal with container-scoped Blob read access to stage Markdown/JSON pairs into `apps/fullswing-blog/public/blog/` before the static build. Initial content seeding is an explicit opt-in, guarded to an empty prefix. `rg-fullswing-blog` remains an independent static-site lifecycle.
 
 **Runtime Packaging**: CI installs the workspace, tests the CMS, compiles `content-model`, `markdown-renderer`, and the CMS, then creates a production-only package containing workspace symlink targets, public assets, compiled output, and `blob-composition.mjs`. App Service starts the compiled entry point directly and receives required configuration through app settings; `.env` is not deployed.
 

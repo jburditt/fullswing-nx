@@ -23,7 +23,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       AZURE_LOCATION: westus2
       CMS_RESOURCE_GROUP: rg-fullswing-cms
-      CONTENT_RESOURCE_GROUP: rg-fullswing-cms
+      CONTENT_RESOURCE_GROUP: rg-fullswing-content
       CMS_APP_NAME: ${{ vars.CMS_APP_NAME }}
       CMS_ENTRA_CLIENT_ID: ${{ vars.CMS_ENTRA_CLIENT_ID }}
       CMS_ADMIN_OBJECT_IDS: ${{ vars.CMS_ADMIN_OBJECT_IDS }}

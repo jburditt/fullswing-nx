@@ -315,7 +315,7 @@ Each story has a separate independent test criterion above. Automated tests are 
 - [x] T091 Add sync tests for prefix mapping, stale-file removal, malformed/empty pairs, and preservation of the previous directory on download failure in `scripts/sync-blog-content.test.mjs`.
 - [x] T092 Implement the Azure CLI-based Blob sync utility with path validation and staged directory replacement in `scripts/sync-blog-content.mjs`.
 - [x] T093 Add an App Service production start command that does not require the gitignored `.env` file in `apps/fullswing-cms/package.json`.
-- [x] T094 Add content-storage and CMS-host Bicep templates targeting the shared `rg-fullswing-cms` resource group, including scoped Blob Data Reader access for the static build identity in `apps/fullswing-cms/infra/content-storage.bicep` and `apps/fullswing-cms/infra/cms-host.bicep`.
+- [x] T094 Add content-storage and CMS-host Bicep templates with scoped Blob Data Reader access for the static build identity in `apps/fullswing-cms/infra/content-storage.bicep` and `apps/fullswing-cms/infra/cms-host.bicep`.
 - [x] T095 Add a manually triggered CMS workflow to test/build the workspace, provision persistent Blob and Linux F1 resources, optionally seed an empty blog prefix, and deploy the compiled package without a destroy path in `.github/workflows/deploy-cms.yml`.
 - [x] T096 Update the static deployment workflow to compile workspace libraries and sync Blob blogs into `apps/fullswing-blog/public/blog/` before the existing static build in `.github/workflows/deploy.yml`.
 - [x] T097 Document GitHub settings, Entra callback, RBAC prerequisites, seed procedure, CMS/blog resource-group boundary, and tier limitations in `apps/fullswing-cms/README.md`, `specs/001-admin-content-management/quickstart.md`, and the feature design artifacts.
@@ -331,7 +331,7 @@ Each story has a separate independent test criterion above. Automated tests are 
 - [x] T102 Update CMS and static deployment workflows to provision and discover the content account in `rg-fullswing-cms` in `.github/workflows/deploy-cms.yml` and `.github/workflows/deploy.yml`.
 - [x] T103 Align deployment documentation and resource-group requirements with the consolidated CMS group in `apps/fullswing-cms/README.md` and the feature design artifacts.
 
-**Operational boundary**: Neither deployment workflow deletes `rg-fullswing-cms`. Static-blog `azd down` remains scoped to `rg-fullswing-blog`.
+**Operational boundary**: Superseded by Phase 16 per the user's deployment-lifecycle decision. Static-blog `azd down` remains scoped to `rg-fullswing-blog`.
 
 ## Phase 15: First Deployment CI Compatibility
 
@@ -343,3 +343,13 @@ Each story has a separate independent test criterion above. Automated tests are 
 - [x] T107 Reproduce the clean shared-library build order and verify CMS tests, static-blog tests/build, sync tests, Bicep diagnostics, and diff formatting.
 
 **Operational boundary**: The first dispatched CMS run failed in CI before Azure provisioning because linked library outputs were not built first. No Azure resources were created by that run. T099 remains the post-merge deployment and live smoke-test gate.
+
+## Phase 16: Separate Persistent Blob Resource Group
+
+**Purpose**: Keep persistent CMS content in `rg-fullswing-content`, separate from the CMS App Service in `rg-fullswing-cms` and the static blog in `rg-fullswing-blog`.
+
+- [x] T108 Restore the content resource group setting in the CMS deployment and static Blob-discovery workflows in `.github/workflows/deploy-cms.yml` and `.github/workflows/deploy.yml`.
+- [x] T109 Align CMS operations, spec, plan, research, and quickstart documentation to the three-group lifecycle in `apps/fullswing-cms/README.md` and `apps/fullswing-cms/specs/001-admin-content-management/`.
+- [x] T110 Verify both workflows and Bicep templates, run CMS and static-blog tests/builds plus Blob sync tests, and confirm the diff is clean.
+
+**Operational boundary**: Neither the CMS nor static-blog workflow deletes `rg-fullswing-content`. Only the dedicated persistent-content lifecycle may remove that group; static-blog teardown remains scoped to `rg-fullswing-blog`.

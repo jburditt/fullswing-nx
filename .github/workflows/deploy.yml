@@ -26,7 +26,7 @@ jobs:
       AZURE_ENV_NAME: fullswing-blog
       AZURE_LOCATION: westus2
       AZURE_RESOURCE_GROUP: rg-fullswing-blog
-      CMS_CONTENT_RESOURCE_GROUP: rg-fullswing-cms
+      CMS_CONTENT_RESOURCE_GROUP: rg-fullswing-content
       BLOG_STORAGE_CONTAINER_NAME: fullswing-cms-state
     steps:
       - uses: actions/checkout@v4

@@ -54,11 +54,11 @@ Configure these GitHub repository secrets:
 - `CMS_SECRET_ENCRYPTION_KEY`, a base64-encoded random 32-byte key.
 - `CMS_SESSION_COOKIE_SECRET`, a random string of at least 32 characters.
 
-Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` as a Web redirect URI in the CMS Entra application. The GitHub deployment principal needs permission to create `rg-fullswing-cms`, deploy App Service and Storage resources into it, and create a scoped Blob data role assignment. Use an owner or delegate role-assignment permission before running the workflow.
+Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` as a Web redirect URI in the CMS Entra application. The GitHub deployment principal needs permission to create `rg-fullswing-cms` and `rg-fullswing-content`, deploy App Service and Storage resources, and create a scoped Blob data role assignment. Use an owner or delegate role-assignment permission before running the workflow.
 
 On the first workflow run, set `seed_initial_content` to `true` to copy the repository's current blog pairs into an empty `content/blog/` Blob prefix. It refuses to overwrite a non-empty prefix. After that, CMS edits in Blob become authoritative. The Static Web App workflow reads that prefix with its federated identity and stages the files into `apps/fullswing-blog/public/blog/` before building.
 
-The CMS host and content account share `rg-fullswing-cms`, while `rg-fullswing-blog` remains separate. Neither deployment workflow deletes `rg-fullswing-cms`. The host uses App Service Linux F1, which has strict CPU and bandwidth quotas, no custom domain or SLA, and may cold-start or restart. The Blob free allowance is only for the first 12 months for eligible new Azure accounts; storage and transaction charges may apply afterward.
+The CMS host uses `rg-fullswing-cms`; persistent Blob content uses `rg-fullswing-content`; the static site remains in `rg-fullswing-blog`. Neither deployment workflow deletes `rg-fullswing-content`. The host uses App Service Linux F1, which has strict CPU and bandwidth quotas, no custom domain or SLA, and may cold-start or restart. The Blob free allowance is only for the first 12 months for eligible new Azure accounts; storage and transaction charges may apply afterward.
 
 ## Required Settings
 

@@ -28,6 +28,7 @@ jobs:
       AZURE_RESOURCE_GROUP: rg-fullswing-blog
       CMS_CONTENT_RESOURCE_GROUP: rg-fullswing-content
       BLOG_STORAGE_CONTAINER_NAME: fullswing-cms-state
+      LIVE_RELOAD: '0'
     steps:
       - uses: actions/checkout@v4
 

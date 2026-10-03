@@ -132,7 +132,7 @@ description: "Implementation tasks for Fullswing CMS Admin Content Management"
 
 ## Phase 6: User Story 4 - Use Configurable Content Storage (Priority: P1)
 
-**Goal**: Implement OneDrive as the initial production provider behind the provider-neutral storage port, preserving complete listings, pair integrity, delegated access, and compare-and-save behavior.
+**Goal**: Implement OneDrive as an optional provider behind the provider-neutral storage port, preserving complete listings, pair integrity, delegated access, and compare-and-save behavior. The Azure deployment's Blob-only authority is added in Phase 12.
 
 **Independent Test**: Run the provider conformance suite against the fake and OneDrive adapter; test pagination, delegated permission failure, stale versions, and partial pair-write reporting.
 
@@ -150,7 +150,7 @@ description: "Implementation tasks for Fullswing CMS Admin Content Management"
 - [x] T048 [US4] Normalize matched Markdown and JSON sidecars into CMS entries, validate metadata through `@fullswing/content-model`, and reject or report orphaned items in `apps/fullswing-cms/src/content/storage/onedrive/onedrive-provider.ts`.
 - [x] T049 [US4] Implement entry reads and compare-and-save for complete Markdown/metadata pairs using delegated administrator access and supported conditional writes in `apps/fullswing-cms/src/content/storage/onedrive/onedrive-provider.ts`.
 - [x] T050 [US4] Map Graph authorization, throttling, precondition, and provider failures to provider-neutral errors without returning Graph models or secrets in `apps/fullswing-cms/src/content/storage/onedrive/onedrive-errors.ts`.
-- [x] T051 [US4] Register OneDrive as the only production provider and activate candidates only after validation in `apps/fullswing-cms/src/content/storage/provider-registry.ts` and `apps/fullswing-cms/src/content/application/select-content-provider.ts`.
+- [x] T051 [US4] Register OneDrive as an opt-in composition provider and activate candidates only after validation in `apps/fullswing-cms/src/content/storage/provider-registry.ts` and `apps/fullswing-cms/src/content/application/select-content-provider.ts`.
 
 **Checkpoint**: Dashboard and editor use the OneDrive adapter through the same storage port they used with test fakes; no workflow imports Microsoft Graph types.
 
@@ -234,7 +234,7 @@ description: "Implementation tasks for Fullswing CMS Admin Content Management"
 
 - **Setup (Phase 1)**: No dependencies; creates runtime/workspace dependencies and the shared renderer package boundary.
 - **Foundational (Phase 2)**: Depends on Setup and blocks all stories through the common server, storage, configuration, authentication, and error contracts.
-- **User stories (Phases 3–8)**: Depend on Foundational. US1 enables protected-route work. US2 and US3 can develop against the in-memory content provider; OneDrive integration in US4 is required before release against production content. US4 also depends on US1's delegated identity service. US5 depends on US1, foundational configuration/secret stores, and its GitHub test adapter. US6 depends on US1 route guards and US2 page summaries.
+- **User stories (Phases 3–8)**: Depend on Foundational. US1 enables protected-route work. US2 and US3 can develop against the in-memory content provider; OneDrive in US4 remains optional, while Phase 12 supplies the Blob provider for the Azure deployment. US4 also depends on US1's identity service. US5 depends on US1, foundational configuration/secret stores, and its GitHub test adapter. US6 depends on US1 route guards and US2 page summaries.
 - **Polish (Phase 9)**: Depends on the stories selected for delivery; cross-project Markdown compatibility depends on US3.
 
 ### User Story Dependencies
@@ -271,14 +271,39 @@ description: "Implementation tasks for Fullswing CMS Admin Content Management"
 
 ### Useful MVP
 
-Deliver US1–US4 plus the minimum OneDrive configuration needed to connect the selected folder. This yields a protected CMS that can list, filter, edit, validate, preview, and save blogs against OneDrive. US5's GitHub workflow dispatch and US6's HTML placeholder can follow as separate increments; the OneDrive configuration UI needed to operate the CMS must be included before the first live deployment.
+Deliver US1–US4 plus a deployment-selected content provider. The Azure composition uses Blob for content and runtime state without OneDrive; other compositions may register OneDrive. This yields a protected CMS that can list, filter, edit, validate, preview, and save content against the selected source. US5's GitHub workflow dispatch and US6's HTML page source support remain independently testable increments.
 
 ### Incremental Delivery
 
 1. Complete Setup and Foundational; verify CMS composition with test fakes.
-2. Complete US1 and US4 foundations for protected routes and OneDrive access.
-3. Complete US2 and US3 against the provider contract; integrate with OneDrive for a complete content-authoring increment.
+2. Complete US1 and the selected content provider integration (OneDrive or Blob composition).
+3. Complete US2 and US3 against the provider contract; integrate with the Azure Blob composition for the Azure deployment.
 4. Complete US5 for provider/workflow configuration and GitHub dispatch.
 5. Complete US6 read-only HTML page visibility and the final cross-cutting gates.
 
 Each story has a separate independent test criterion above. Automated tests are required by the CMS constitution and use fake providers or mocked integrations; no live credentials are needed for the normal test suite.
+
+## Phase 11: Azure Blob Runtime Persistence Composition
+
+**Purpose**: Provide durable CMS configuration and encrypted secrets for an Azure-hosted Node deployment while keeping persistence ports replaceable and sessions in memory.
+
+- [x] T080 Add `@azure/storage-blob` to `apps/fullswing-cms/package.json` and update the root `package-lock.json`.
+- [x] T081 Add tests for configuration persistence/conflicts and secret encryption, round-trip, deletion, tamper rejection, and incorrect keys in `apps/fullswing-cms/test/unit/blob-stores.test.ts`.
+- [x] T082 Implement `BlobConfigurationStore` with ETag-based conditional writes and `EncryptedBlobSecretStore` with AES-256-GCM, a host-supplied key, and authenticated secret references in `apps/fullswing-cms/src/config/blob-stores.ts`.
+- [x] T083 Add `blob-composition.mjs` to wire Blob configuration/secrets, Entra settings from environment variables, and an in-memory session store in `apps/fullswing-cms/blob-composition.mjs`.
+- [x] T084 Update runtime persistence requirements, architecture decisions, data model, and operator steps in `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, and `apps/fullswing-cms/README.md`.
+- [x] T085 Run `npm exec nx run fullswing-cms:test` and validate `blob-composition.mjs` syntax.
+
+**Operational boundary**: This phase adds a deployment composition, not Azure infrastructure or a Node hosting resource. Session records are intentionally lost on process restart; the MSAL token cache is persisted in the encrypted Blob-backed secret store.
+
+## Phase 12: Azure Blob Content Authority
+
+**Purpose**: Make Blob Storage the sole content provider for the Azure composition while retaining OneDrive only for compositions that explicitly enable it.
+
+- [x] T086 Add Blob content-provider tests for blog/page pairs, year routing, stale ETag conflicts, malformed metadata, and orphan rejection in `apps/fullswing-cms/test/integration/blob-content-provider.test.ts`.
+- [x] T087 Implement Blob listing, reads, conditional pair writes, compensation, page saves, and year-prefixed content names in `apps/fullswing-cms/src/content/storage/blob-content-provider.ts`.
+- [x] T088 Register Blob in `blob-composition.mjs`, opt out of automatic OneDrive registration, use OIDC-only sign-in scopes, and default Configuration to the first registered provider in `apps/fullswing-cms/blob-composition.mjs`, `apps/fullswing-cms/src/bootstrap.ts`, `apps/fullswing-cms/src/auth/entra-authentication.ts`, and `apps/fullswing-cms/src/views/configuration.ts`.
+- [x] T089 Align the feature requirements, architecture, research, data model, quickstart, provider contract, and operator README with Blob content authority in the corresponding CMS documentation files.
+- [x] T090 Run `npm exec nx run fullswing-cms:test`; all 96 CMS tests pass.
+
+**Operational boundary**: This phase stores content under `content/` in the same private container as configuration and encrypted secrets. It does not provision Azure hosting, perform an automatic migration from OneDrive or local files, or synchronize Blob content into the static blog publisher's repository.

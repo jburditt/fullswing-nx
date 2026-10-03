@@ -148,6 +148,40 @@ test('MSAL adapter requests the configured delegated scope and resolves the cach
   assert.equal(accessToken, 'delegated-graph-token');
 });
 
+test('MSAL adapter supports identity-only scopes for Blob content deployments', async () => {
+  let authorizationScopes: string[] | undefined;
+  let codeScopes: string[] | undefined;
+  const account = {
+    homeAccountId: 'home-account-1', environment: 'login.microsoftonline.com', tenantId: 'tenant-a',
+    username: 'admin@example.test', localAccountId: 'object-a', name: 'CMS Admin',
+  } satisfies AccountInfo;
+  const client = {
+    async getAuthCodeUrl(request: AuthorizationUrlRequest) {
+      authorizationScopes = request.scopes;
+      return 'https://login.microsoftonline.com/authorize';
+    },
+    async acquireTokenByCode(request: AuthorizationCodeRequest) {
+      codeScopes = request.scopes;
+      return { account, tenantId: 'tenant-a', uniqueId: 'object-a' } as AuthenticationResult;
+    },
+  } as unknown as IConfidentialClientApplication;
+  const adapter = new MsalEntraOAuthClient({
+    clientId: 'client-id',
+    tenantId: 'tenant-a',
+    clientSecret: 'server-only-secret',
+    redirectUri: 'https://cms.example.test/auth/callback',
+    signInScopes: ['openid', 'profile', 'email'],
+    cacheSecretReference: 'entra-cache',
+    secretStore: new FakeSecretStore(),
+  }, client);
+
+  await adapter.createAuthorizationUrl('state-1', '/dashboard');
+  await adapter.exchangeAuthorizationCode('authorization-code', 'state-1');
+
+  assert.deepEqual(authorizationScopes, ['openid', 'profile', 'email']);
+  assert.deepEqual(codeScopes, ['openid', 'profile', 'email']);
+});
+
 test('MSAL cache plugin restores and persists tokens only through the server-side secret store', async () => {
   const secrets = new FakeSecretStore();
   await secrets.set('entra-cache', 'serialized-before');

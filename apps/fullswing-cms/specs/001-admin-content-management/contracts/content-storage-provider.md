@@ -32,7 +32,7 @@ Exact TypeScript signatures belong in the implementation. Provider APIs and erro
 
 ## Local File Adapter Mapping
 
-- Local-file storage is a development provider, not a replacement for the production OneDrive authority.
+- Local-file storage is a development provider, not a replacement for the selected deployment authority.
 - The configured public directory is validated as an existing writable directory before activation.
 - Blogs are stored as matched Markdown/JSON pairs under `blog/<YYYY>/`; pages are stored as matched HTML/JSON pairs under `pages/<YYYY>/`. `<YYYY>` comes from the metadata date.
 - Basenames are restricted to lowercase letters, digits, and hyphens. Provider IDs are opaque and distinguish entries by kind, year, and basename.
@@ -50,6 +50,14 @@ Exact TypeScript signatures belong in the implementation. Provider APIs and erro
 - On a two-item write failure, compensate where possible and return `PartialWrite` if consistency cannot be restored.
 - Do not expose Graph SDK models, paths, HTTP statuses, or access tokens to CMS use cases.
 
+## Azure Blob Adapter Mapping
+
+- The Azure composition registers Blob as its sole content provider and does not register OneDrive or fall back to another provider.
+- Store blogs under `<content-prefix>/blog/<YYYY>/<basename>.md` and `.json`; store pages under `<content-prefix>/pages/<YYYY>/<basename>.html` and `.json`. The default content prefix is `content`.
+- Use Blob ETags as opaque pair versions and conditional writes to reject stale body or metadata updates. Blob does not transact both pair members atomically; compensate a failed second write and report `PartialWrite` if consistency cannot be restored.
+- Keep content under its prefix separate from runtime configuration and encrypted secrets in the same private container.
+- The Azure composition signs administrators in using OIDC identity scopes and does not request Microsoft Graph file permissions.
+
 ## Conformance Tests
 
-Run contract tests against an in-memory fake and provider-focused tests against each adapter. Cover configuration rejection, empty and paginated collections, valid/malformed/orphaned pairs, create/update round-trips, stale versions, invalid metadata with no writes, provider outage, first/second member write failure, compensation, and source-switch non-migration. Local-file tests should additionally cover year-based paths, duplicate blog basenames, page source round-trips, and escaped form handling. A fake provider proves CMS workflow independence; it does not count as a shipped alternate production provider.
+Run contract tests against an in-memory fake and provider-focused tests against each adapter. Cover configuration rejection, empty and paginated collections, valid/malformed/orphaned pairs, create/update round-trips, stale versions, invalid metadata with no writes, provider outage, first/second member write failure, compensation, and source-switch non-migration. Blob tests additionally cover year-based names, ETag preconditions, Blob-only registration, and blog/page round-trips. Local-file tests cover year-based paths, duplicate blog basenames, page source round-trips, and escaped form handling. A fake provider proves CMS workflow independence; it does not count as a shipped alternate production provider.

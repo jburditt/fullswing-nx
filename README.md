@@ -170,6 +170,15 @@ The sidecar JSON must use route `/page/<basename>`.
 - Update angular-blog readme and reference this repository
 - Add blog comments
 - Run AI performance check, verify everything is static html, minimize typescript, and cache/bundle
+- Add blocks with header e.g. https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli
+```
+> \[!NOTE]
+> If you have `ignore-scripts=true` in your `~/.npmrc` file, you must use the command:
+>
+> ```shell copy
+> npm_config_ignore_scripts=false npm install -g @github/copilot
+> ```
+```
 
 ## Roadmap
 

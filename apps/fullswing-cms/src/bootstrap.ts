@@ -26,6 +26,7 @@ export interface CmsApplicationDependencies {
   sessionStore: SessionStore;
   allowlist: AdminAllowlist;
   contentProviders: ContentProviderRegistry;
+  registerOneDrive?: boolean;
   sessionCookieSecret: string;
   secureCookies: boolean;
   developmentSession?: CmsSession;
@@ -70,7 +71,7 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
     developmentSession: dependencies.developmentSession,
   });
 
-  if (!dependencies.contentProviders.has('onedrive')) {
+  if (dependencies.registerOneDrive !== false && !dependencies.contentProviders.has('onedrive')) {
     registerOneDriveProvider(dependencies.contentProviders, (_settings, _revision, context) => {
       if (!context?.tokenCacheReference) {
         throw new CmsError('authentication-required', 'Sign in to access OneDrive.', 401);

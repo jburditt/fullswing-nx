@@ -39,19 +39,33 @@ The application has exactly one active provider configuration per deployment.
 
 | Field | Type | Rules |
 |---|---|---|
-| `providerType` | string discriminator | `onedrive` is the production provider; `file` and `demo` are development providers. |
-| `providerSettings` | provider-specific object | OneDrive uses non-secret drive/folder identifiers; local-file storage uses a writable website public-directory path; values are validated before activation. |
+| `providerType` | string discriminator | `blob` is the Azure deployment provider; `onedrive` is optional when registered; `file` and `demo` support development. |
+| `providerSettings` | provider-specific object | Blob uses a content prefix (default `content`); OneDrive uses non-secret drive/folder identifiers; local-file storage uses a writable website public-directory path; values are validated before activation. |
 | `githubTarget` | owner, repository, workflow ID/file, ref, optional inputs | Persisted non-secret dispatch target; individual trigger requests cannot override it. |
 | `revision` | monotonically changed opaque value | Included in editor submissions so a provider switch invalidates forms opened against the previous source. |
 | `secretReferences` | secret-store references | Entra credentials, token-cache material, and repository-scoped GitHub token remain server-side and are never returned to the browser. |
 
 Provider selection transition: `active A` -> validate candidate B -> if valid, activate B and leave A untouched; if invalid, keep A active and report configuration failure. No import, merge, copy, or migration occurs.
 
+## Runtime Persistence
+
+Runtime configuration, secrets, and sessions use separate CMS-owned store ports. The Azure Blob composition supplies these implementations:
+
+| Store | Azure composition behavior | Durability and security |
+|---|---|---|
+| `ConfigurationStore` | Stores the current `CmsConfiguration` as JSON in `configuration.json`; uses the Blob ETag and conditional writes to prevent stale or racing updates. | Persists across process restarts; contains non-secret settings and secret references only. |
+| `SecretStore` | Stores one versioned envelope per secret reference under the `secrets/` prefix. The envelope contains a random 96-bit nonce, AES-GCM authentication tag, and ciphertext, encoded as base64. The reference is authenticated as additional data. | Plaintext is returned only to server-side callers. The 32-byte encryption key comes from `CMS_SECRET_ENCRYPTION_KEY`, outside Blob Storage. Losing the key makes existing secrets unreadable; key rotation requires re-encryption. |
+| `SessionStore` | Stores sessions in process memory. | Sessions do not survive a process restart; affected administrators must sign in again. |
+| `BlobContentStorageProvider` | Stores Markdown/JSON pairs at `content/blog/<YYYY>/<basename>.md` and `.json`; stores HTML/JSON pairs at `content/pages/<YYYY>/<basename>.html` and `.json`. | Uses Blob ETags for opaque versions and conditional writes. Pair writes are not transactional; failed compensation is reported as a partial write. |
+
+The Blob container must be private and access restricted to the CMS. Content is isolated under its prefix from `configuration.json` and the `secrets/` prefix. The composition creates the configured container when absent. Replacing Blob or changing secret-management technology must be done behind the `ContentStorageProvider`, `ConfigurationStore`, and `SecretStore` interfaces; application services do not depend on Azure SDK types.
+
 ## Administrator and Session
 
 - **Administrator identity**: Entra tenant ID and immutable object ID, checked against the externally provisioned allowlist after authentication. Email address is display/contact data only, not the authorization key.
 - **Authenticated session**: server-side session ID, administrator identity, issued/expiry times, CSRF token, provider configuration revision, and MSAL cache reference. Cookies contain only an opaque session identifier or protected minimal session data; Graph access/refresh tokens are not sent to browser scripts.
 - **Session lifecycle**: anonymous -> authenticated after successful state-checked Entra callback and allowlist approval -> expired or logged out; expired/logged-out requests to protected routes return to Login.
+- **Azure session durability**: the current Blob composition keeps session records in memory, even though its MSAL token cache is persisted through the encrypted secret store. A restart clears sessions and requires sign-in again.
 
 ## Workflow Dispatch
 

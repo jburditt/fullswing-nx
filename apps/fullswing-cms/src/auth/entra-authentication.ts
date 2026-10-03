@@ -27,6 +27,7 @@ export interface MsalEntraClientOptions {
   tenantId: string;
   clientSecret: string;
   redirectUri: string;
+  signInScopes?: string[];
   cacheSecretReference: string;
   secretStore: SecretStore;
 }
@@ -66,7 +67,7 @@ export class MsalEntraOAuthClient implements EntraOAuthClient {
 
   async createAuthorizationUrl(state: string, _returnTo: string): Promise<string> {
     return this.client.getAuthCodeUrl({
-      scopes: GRAPH_SCOPES,
+      scopes: this.options.signInScopes ?? GRAPH_SCOPES,
       redirectUri: this.options.redirectUri,
       state,
     });
@@ -76,7 +77,7 @@ export class MsalEntraOAuthClient implements EntraOAuthClient {
     const result = await this.client.acquireTokenByCode({
       code,
       redirectUri: this.options.redirectUri,
-      scopes: GRAPH_SCOPES,
+      scopes: this.options.signInScopes ?? GRAPH_SCOPES,
       state,
     });
     if (!result.account?.homeAccountId || !result.tenantId || !result.uniqueId) {

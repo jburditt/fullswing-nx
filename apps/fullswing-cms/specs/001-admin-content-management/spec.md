@@ -6,11 +6,16 @@
 
 **Status**: Draft
 
-**Input**: Update the CMS to support production OneDrive content storage and local-file development storage under the Fullswing blog public directory. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, configure provider and GitHub Action settings, and edit HTML page source only when the selected provider supports page writes. HTML source is never rendered or executed by the CMS.
+**Input**: Update the CMS to support a composition-selected content provider, local-file development storage under the Fullswing blog public directory, and an Azure deployment backed entirely by Blob Storage. OneDrive remains an optional provider for compositions that register it. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, configure provider and GitHub Action settings, and edit HTML page source only when the selected provider supports page writes. HTML source is never rendered or executed by the CMS.
 
 ### Session 2026-09-29
 
 - Q: What local-file layout should the CMS use for blogs and pages? → A: Configure the website `public` directory; store blog Markdown/JSON pairs under `blog/<year>/` and page HTML/JSON pairs under `pages/<year>/`, using the metadata date's year. File-backed HTML source is editable in the CMS but is not rendered or published by the static blog generator.
+
+### Session 2026-10-02
+
+- Q: How should a hosted CMS persist configuration, secrets, and sessions? → A: Persist configuration in Azure Blob Storage; keep the `SecretStore` provider replaceable and encrypt secret values with AES-256-GCM using a key supplied separately through host environment settings; keep sessions in memory for now, so process restarts require administrators to sign in again.
+- Q: What is the content authority for the Azure deployment? → A: Azure Blob Storage is the sole content and runtime-state store for that composition. It does not register or use OneDrive. The OneDrive adapter remains available to other compositions, but is not a fallback or synchronization target.
 
 ## Clarifications
 
@@ -71,7 +76,7 @@ An administrator creates or edits a blog post by entering Markdown and its metad
 
 ### User Story 4 - Use Configurable Content Storage (Priority: P1)
 
-An administrator reads and saves content through the configured provider. OneDrive is the production content source; local-file storage is also available for development against the Fullswing blog workspace. The dashboard and authoring workflows use the common provider contract.
+An administrator reads and saves content through the provider registered by the deployment composition. Azure uses Blob Storage as its content authority; OneDrive is available only to compositions that register it, and local-file storage supports development against the Fullswing blog workspace. The dashboard and authoring workflows use the common provider contract.
 
 **Why this priority**: The CMS must manage the same source of content that the publishing workflow consumes, report incomplete writes accurately, and allow storage services to evolve independently from content-management workflows.
 
@@ -79,7 +84,7 @@ An administrator reads and saves content through the configured provider. OneDri
 
 **Acceptance Scenarios**:
 
-1. **Given** the configured OneDrive service is accessible, **When** the administrator loads the dashboard, **Then** the listed content reflects the available stored content.
+1. **Given** the selected provider is accessible, **When** the administrator loads the dashboard, **Then** the listed content reflects the available stored content.
 2. **Given** an administrator saves a valid blog change, **When** both content and metadata are stored successfully by the selected service, **Then** the CMS confirms the save and a subsequent read returns the saved values.
 3. **Given** a read or write fails in the selected service, **When** the operation ends, **Then** the CMS reports failure without presenting stale or partial data as successfully saved.
 4. **Given** saving either member of a blog and metadata pair fails, **When** the operation ends, **Then** the CMS does not report success and identifies any inconsistency that needs resolution.
@@ -91,9 +96,9 @@ An administrator reads and saves content through the configured provider. OneDri
 10. **Given** the local-file provider is selected, **When** an administrator saves a page, **Then** its HTML source and JSON sidecar are written under `pages/<metadata-year>/` and can be read back without executing the HTML.
 11. **Given** an administrator changes a content date to a different year, **When** they save the item, **Then** the pair is stored in that year's directory and the prior pair is removed only after the new pair is written successfully.
 
-### User Story 5 - Configure Integrations and Dispatch Workflow (Priority: P2)
+### User Story 5 - Configure Provider and Dispatch Workflow (Priority: P2)
 
-An administrator reviews and updates OneDrive and GitHub Action settings, then can request the configured workflow to run from the CMS.
+An administrator reviews and updates the selected content provider and GitHub Action settings, then can request the configured workflow to run from the CMS.
 
 **Why this priority**: Integration settings enable content access and the publishing workflow while keeping credentials under administrative control.
 
@@ -130,6 +135,7 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - The configured administrator allowlist is empty or an account's identity cannot be matched; access is denied by default.
 - The selected content-storage service is unavailable, access is revoked, or content changes during an edit; the CMS reports the condition and does not claim an unsuccessful read or write succeeded.
 - An allowlisted administrator lacks permission to the configured OneDrive folder; OneDrive access fails explicitly and the CMS does not fall back to app-only access.
+- Azure Blob content is unavailable, a content pair is missing a sidecar, or an ETag changes during save; the CMS reports a provider, validation, or version-conflict error and does not report success.
 - A storage service is not supported or its configuration is incomplete; the CMS does not silently fall back to another service or present content from the wrong source.
 - A local public directory is missing, not a directory, or not writable; configuration validation fails without switching the active provider.
 - A local content file in a four-digit year directory is missing its matching sidecar or has malformed metadata; the CMS reports invalid content instead of silently omitting it. Content is discovered only in four-digit year directories.
@@ -141,6 +147,8 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - A dashboard filter produces no matches or the underlying folder contains no entries; the page shows an empty state rather than an error.
 - A secret has not been configured, is rejected by an integration, or is replaced; the UI and logs do not disclose its value.
 - The GitHub credential is invalid or revoked, the configured workflow cannot be dispatched, or GitHub throttles or rejects a request; the CMS reports dispatch failure and does not claim deployment completion.
+- Azure Blob Storage is unavailable, the configured encryption key is missing or invalid, or an encrypted secret cannot be authenticated; startup or the affected operation fails without exposing plaintext secret data.
+- The CMS process restarts while using the Azure Blob composition; persisted configuration and secrets remain available, while in-memory administrator sessions are lost and require a new sign-in.
 - An HTML page is selected while the active provider is read-only; the CMS leaves it read-only and shows the placeholder.
 
 ## Requirements *(mandatory)*
@@ -156,7 +164,7 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **FR-007**: The Markdown and metadata validation status MUST be understandable without relying on color alone and MUST identify the fields or content that need correction.
 - **FR-008**: Blog and page metadata MUST remain compatible with the Fullswing content contract, including title, author, date, and categories; invalid or incomplete metadata MUST be rejected before storage. Routes MUST be derived consistently with the content kind and basename.
 - **FR-009**: The Markdown preview MUST NOT execute scripts, event handlers, or other active content supplied in stored or edited content.
-- **FR-010**: The CMS MUST access blog and HTML page content through a provider-neutral content-storage capability. The configured OneDrive folder MUST be authoritative when OneDrive is selected; the local-file provider MUST use the configured website public directory.
+- **FR-010**: The CMS MUST access blog and HTML page content through a provider-neutral content-storage capability. The provider explicitly selected by the deployment composition MUST be authoritative. The Azure Blob composition MUST use Blob Storage as its sole content authority; the configured OneDrive folder MUST be authoritative only in compositions that register and select OneDrive; the local-file provider MUST use the configured website public directory.
 - **FR-011**: The CMS MUST report successful saves only after all required content for that save has been stored; failed or partial writes MUST be reported and MUST identify any unresolved content mismatch.
 - **FR-012**: The CMS MUST detect when an item has changed since it was loaded and MUST prevent an unreviewed overwrite of the newer content.
 - **FR-013**: The Configuration page MUST allow administrators to select a registered content-storage provider and manage its required settings, including the local-file public directory, as well as the values needed for GitHub Action invocation; it MUST identify missing or invalid required values. Saving a provider change MUST make the newly selected provider authoritative without modifying or migrating content in the previous provider.
@@ -170,16 +178,22 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **FR-021**: GitHub workflow configuration MUST identify the repository owner and name, workflow identifier, reference to run, and any configured non-secret workflow inputs. Dispatch MUST use only these saved settings and MUST NOT accept a repository or workflow target override from an individual trigger request.
 - **FR-022**: The local-file provider MUST store blog Markdown/JSON pairs at `<public-directory>/blog/<YYYY>/<basename>.md` and `.json`, and page HTML/JSON pairs at `<public-directory>/pages/<YYYY>/<basename>.html` and `.json`, where `<YYYY>` is derived from the metadata date. It MUST validate the target directory and basename and MUST prevent path traversal.
 - **FR-023**: A local-file save that changes the metadata year MUST write the complete new pair before removing the old pair; if the new write fails, the CMS MUST NOT claim success or delete the old pair.
+- **FR-024**: The Azure Blob deployment composition MUST persist CMS configuration through the `ConfigurationStore` port and MUST detect conflicting updates using Blob conditional writes.
+- **FR-025**: The Azure Blob `SecretStore` MUST encrypt each secret using AES-256-GCM with a unique nonce and authenticated secret reference before writing it to Blob Storage. The encryption key MUST be supplied separately by the host, MUST NOT be written to the Blob container, and MUST remain replaceable behind the `SecretStore` port.
+- **FR-026**: The Azure Blob composition MUST keep administrator sessions in memory. A process restart MUST invalidate those sessions; durable session persistence is not required by this release.
+- **FR-027**: The Azure Blob composition MUST register Blob Storage as its content provider and MUST store blogs under `content/blog/<YYYY>/<basename>.md` plus `.json`, and pages under `content/pages/<YYYY>/<basename>.html` plus `.json`, where `<YYYY>` is derived from the metadata date. The configured content prefix MAY override `content`.
+- **FR-028**: The Azure Blob composition MUST NOT register or fall back to OneDrive and MUST NOT request Microsoft Graph file permissions for its content workflows. Administrator sign-in MUST use identity scopes only.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Blog Entry**: A Markdown blog item and its associated metadata, including route, title, author, date, and one or more categories.
 - **Page Entry**: An HTML source item and metadata surfaced in the dashboard; some providers allow source editing, but the CMS does not render or execute the HTML.
-- **Content Storage Provider**: A configured service that reads and writes content using the CMS content-storage contract; OneDrive is the production provider and local files support development.
+- **Content Storage Provider**: A composition-registered service that reads and writes content using the CMS content-storage contract. Azure uses Blob Storage; other compositions may register OneDrive; local files support development.
 - **Administrator**: An authenticated identity that is authorized by the configured administrator allowlist.
 - **Workflow Dispatch Request**: An administrator's request to invoke the configured GitHub workflow, with a result that distinguishes dispatch acceptance or failure from later workflow completion.
 - **Integration Configuration**: The selected content-storage provider and its settings, together with the values needed to configure GitHub Action invocation; secrets are protected and masked.
 - **Edit Version**: The version of an item an administrator loaded, used to detect whether the stored item changed before a save.
+- **Runtime Persistence Composition**: Deployment-selected implementations of configuration, secret, and session stores. The Azure composition stores configuration in Blob Storage, stores authenticated ciphertext for secrets in Blob Storage, and stores sessions in process memory.
 
 ## Success Criteria *(mandatory)*
 
@@ -199,17 +213,24 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **SC-012**: 100% of accepted workflow dispatches target the saved repository, workflow, reference, and inputs; no trigger request can override the configured target.
 - **SC-013**: 100% of local-file blog and page save tests create a matched body/metadata pair under the year derived from the metadata date, and a subsequent read returns the saved content.
 - **SC-014**: 100% of failed local pair writes leave the prior content intact or report an explicit partial-write failure; no failed save is reported as successful.
+- **SC-015**: Azure Blob configuration reads return the saved configuration; stale revisions or conditional-write races are reported as conflicts rather than overwriting a newer configuration.
+- **SC-016**: Secret-store Blob payloads contain no plaintext secret; valid secrets round-trip with the configured key, and tampered ciphertext or a different key fails without returning secret data.
+- **SC-017**: In the Azure Blob composition, configuration and secrets remain readable after process recreation, while prior in-memory sessions are rejected and require sign-in again.
+- **SC-018**: Azure Blob content-provider tests round-trip blog and page pairs, reject malformed or orphaned pairs, and detect stale ETag versions without overwriting newer content.
+- **SC-019**: The Azure composition exposes Blob as its only content provider and uses identity-only Entra sign-in scopes; it makes no OneDrive or Microsoft Graph file-permission requests.
 
 ## Assumptions
 
 - Administrators are provisioned in an allowlist managed outside the CMS; the Configuration page does not manage administrator membership.
 - Microsoft Entra ID is the identity provider for the first release; the Entra ID tenant registration and credentials are supplied by the deployment environment.
-- OneDrive access uses the signed-in administrator's permissions; every allowlisted administrator is expected to have permission to the configured folder.
+- OneDrive access, when enabled by another composition, uses the signed-in administrator's permissions; every allowlisted administrator is expected to have permission to the configured folder. The Azure Blob composition does not use OneDrive or Microsoft Graph for content.
 - Existing blog content uses matched Markdown and JSON metadata files, with the required fields defined by the Fullswing content contract.
-- OneDrive is the production content-storage provider and is authoritative when selected. A local-file provider is included for development and uses the selected Fullswing blog `public` directory. Other providers are not delivered by this feature.
+- Azure Blob Storage is the content authority for the Azure composition. OneDrive remains an optional adapter for compositions that explicitly register it. A local-file provider is included for development and uses the selected Fullswing blog `public` directory.
 - Changing the selected provider changes the authoritative content source only; content migration, copying, and synchronization between providers are separate features.
-- The CMS sends GitHub workflow dispatch requests; GitHub runs the workflow asynchronously, and observing workflow completion is outside this feature.
+- The CMS sends GitHub workflow dispatch requests; GitHub runs the workflow asynchronously, and observing workflow completion is outside this feature. The Azure Blob composition stores CMS content in Blob but does not synchronize that content into the static blog generator's repository; publishing Blob content requires a separate workflow integration.
 - Local-file configuration, sessions, and secrets are held in memory by the development composition and reset when the CMS process restarts; the content files themselves persist on disk.
+- The Azure Blob composition persists configuration and encrypted secrets in a private container. Its AES-256-GCM key is configured separately through the hosting environment; losing the key makes existing ciphertext unreadable, and rotation requires re-encrypting stored secrets. Sessions remain in memory and are intentionally invalidated by process restarts.
+- This feature supplies the Azure Blob composition but does not provision the Node.js host, storage account, HTTPS endpoint, or host environment settings.
 - Local-file blogs are compatible with the static blog generator's `public/blog/<year>/` discovery. HTML page source is stored under `public/pages/<year>/` but is not discovered or published by the current generator.
 - HTML page source may be edited through the local-file provider, but HTML preview, rendering, Svelte execution, and publication remain out of scope.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.

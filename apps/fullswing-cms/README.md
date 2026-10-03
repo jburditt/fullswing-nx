@@ -1,6 +1,6 @@
 Fullswing CMS
 
-The CMS is a server-rendered Node.js application for managing Fullswing Markdown blogs and discovering HTML pages. It provides Entra sign-in, an administrator dashboard, Markdown editing and sanitized preview, configurable OneDrive or local-file content storage, configuration management, and a GitHub Actions dispatch action. Local-file storage supports editing HTML page source; the CMS does not render or execute stored HTML.
+The CMS is a server-rendered Node.js application for managing Fullswing Markdown blogs and HTML page source. It provides Entra sign-in, an administrator dashboard, Markdown editing and sanitized preview, Blob content storage for the Azure composition, optional OneDrive storage for other compositions, configuration management, and a GitHub Actions dispatch action. Local-file storage supports development. The CMS does not render or execute stored HTML.
 
 ## Workspace Commands
 
@@ -15,9 +15,9 @@ The tests use fakes and mocked Graph/GitHub clients; no tenant credentials or ne
 
 ## Application Composition
 
-`createCmsApp()` and `startCms()` are exported from `src/bootstrap.ts`. The deployment host supplies implementations of `ConfigurationStore`, `SecretStore`, and `SessionStore`, an Entra `IdentityProvider`, an immutable-ID administrator allowlist, and a `ContentProviderRegistry`. The bootstrap registers OneDrive when the registry does not already contain it, mounts the protected routes, and obtains delegated Graph access from each authenticated session.
+`createCmsApp()` and `startCms()` are exported from `src/bootstrap.ts`. A composition supplies implementations of `ConfigurationStore`, `SecretStore`, and `SessionStore`, an Entra `IdentityProvider`, an immutable-ID administrator allowlist, and a `ContentProviderRegistry`. OneDrive registration can be disabled per composition.
 
-There is no built-in production persistence adapter or deployment-specific Entra composition in this package. The host is responsible for durable, access-controlled configuration and secret storage, session lifecycle, network policy, HTTPS termination, and provisioning the CMS settings. Do not use the test fakes as production stores.
+`blob-composition.mjs` is the Azure composition. It registers Blob Storage as its only content provider and stores content under `content/blog/<year>/` and `content/pages/<year>/` in a private container. The same container stores CMS configuration and AES-256-GCM-encrypted `SecretStore` values. The encryption key and Entra application credentials come from host environment settings, so the secret backend can later be replaced without changing CMS application services. This composition requests Entra identity scopes only, not Graph file permissions. Sessions remain in memory and are lost when the process restarts; administrators will need to sign in again. The current static blog deployment still builds from repository content; syncing Blob-managed CMS content into that publisher is a separate integration. The host must provide HTTPS and restrict Blob access to the CMS.
 
 For local development, `memory-composition.mjs` uses a hard-coded `Local Developer` identity, a seeded in-memory demo content provider, and in-memory configuration, secret, and session stores. Run `npm --workspace=fullswing-cms run start` from the workspace root with `CMS_BOOTSTRAP_MODULE=./memory-composition.mjs`, then open `http://localhost:3000/dashboard`. The dashboard includes sample blog drafts and a sample page; edits are lost when the process restarts. This bypass is only for local testing; OneDrive still requires Entra authentication, and the local composition refuses to start when `NODE_ENV=production`.
 
@@ -30,12 +30,21 @@ npm --workspace=fullswing-cms run start
 
 The initial website public directory is `apps/fullswing-blog/public` and can be changed on the Configuration page. Blogs are stored as Markdown/JSON pairs in `blog/<year>/`; HTML pages are stored as HTML/JSON pairs in `pages/<year>/`, with the year taken from the metadata date. The CMS can edit those HTML pages, but the current blog generator does not discover or publish HTML page pairs from `public/pages/`. Configuration, sessions, and secrets in this local composition remain in memory and reset when the process restarts.
 
-For deployment, provide a separate `CMS_BOOTSTRAP_MODULE` ESM module exporting `createCmsDependencies()` and use durable, access-controlled adapters as described above. Startup fails with a generic message if the composition is missing or invalid; adapter errors and credential values are not printed.
+To use the Azure Blob composition, set `CMS_BOOTSTRAP_MODULE=./blob-composition.mjs` and configure these host settings:
+
+- `CMS_BLOB_CONNECTION_STRING` and optionally `CMS_BLOB_CONTAINER_NAME` (defaults to `fullswing-cms-state`). The composition creates the container as private if it does not exist.
+- `CMS_SECRET_ENCRYPTION_KEY`: base64-encoded 32-byte key. Generate one with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`; keep a protected backup because losing or rotating this key without re-encrypting the blobs makes saved secrets unreadable.
+- `CMS_ENTRA_TENANT_ID`, `CMS_ENTRA_CLIENT_ID`, `CMS_ENTRA_CLIENT_SECRET`, and `CMS_ENTRA_REDIRECT_URI`.
+- `CMS_ADMIN_OBJECT_IDS`: comma-separated immutable Entra object IDs in the configured tenant.
+- `CMS_SESSION_COOKIE_SECRET`: random secret of at least 32 characters.
+
+The Configuration page is persisted in Blob Storage. GitHub credentials and the delegated MSAL token cache are encrypted before storage. Sessions are deliberately not persisted. The Azure host must run the compiled CMS with Node.js 20.19 or later and provide HTTPS; this composition does not provision the host or storage account. Startup fails if required settings are missing or invalid.
 
 ## Required Settings
 
-- Entra: tenant ID, application/client ID, client secret, redirect URI, and an allowlist keyed by immutable tenant and object IDs. The application requests delegated Microsoft Graph `Files.ReadWrite` access.
-- OneDrive: a drive ID and root folder ID accessible to every allowlisted administrator. Each request uses that administrator's delegated Graph token; there is no app-only fallback.
+- Entra: tenant ID, application/client ID, client secret, redirect URI, and an allowlist keyed by immutable tenant and object IDs. The Azure Blob composition requests `openid`, `profile`, and `email` only. A composition that enables OneDrive additionally requests delegated Microsoft Graph `Files.ReadWrite` access.
+- Azure Blob: the Azure composition uses the configured private container for content, runtime configuration, and encrypted secrets. Blog/page pairs use `content/blog/<year>/` and `content/pages/<year>/`.
+- OneDrive (optional): a drive ID and root folder ID accessible to every allowlisted administrator. Each request uses that administrator's delegated Graph token; there is no app-only fallback.
 - Configuration and secrets: a durable `ConfigurationStore` for non-secret provider/workflow settings and a server-side `SecretStore` for Entra cache data and GitHub credentials. Secret reads must never be returned to routes or page views.
 - GitHub: owner, repository, workflow file or ID, ref, and bounded non-secret input values. Store a fine-grained credential in the `SecretStore`, scoped to the selected repository with Actions write permission. The workflow must support `workflow_dispatch`.
 - Session security: a high-entropy cookie signing secret of at least 32 characters, secure cookies behind HTTPS, and an administrator session store with expiry.
@@ -63,11 +72,12 @@ The layout should include:
 - A navigation bar with links for dashboard, add blog/page
 - Horizontally centered content that will display the page contents depeneding on the route
 
-Database:
-- the database will be a OneDrive folder that contains the blogs and html pages
+Content storage:
+- Azure deployments use Blob Storage for blogs, HTML pages, configuration, and encrypted secrets
+- OneDrive is an optional content provider for compositions that register it
 
 Technology:
-- typescript, Node, svelte web components, OneDrive integration, latest OAuth
+- TypeScript, Node, optional Svelte web components, Azure Blob Storage, optional OneDrive integration, Entra OAuth
 - Azure entra id for authentication
 - Bicep for infra deploy resources
 - Github action for CI/CD

@@ -42,9 +42,9 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   location: location
   kind: 'linux'
   sku: {
-    name: 'B1'
-    tier: 'Basic'
-    size: 'B1'
+    name: 'F1'
+    tier: 'Free'
+    size: 'F1'
     capacity: 1
   }
   properties: {
@@ -62,7 +62,7 @@ resource cmsApp 'Microsoft.Web/sites@2022-09-01' = {
     siteConfig: {
       linuxFxVersion: 'NODE|24-lts'
       appCommandLine: 'node apps/fullswing-cms/.build/src/index.js'
-      alwaysOn: true
+      alwaysOn: false
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
     }

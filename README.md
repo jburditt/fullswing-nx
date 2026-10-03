@@ -57,7 +57,8 @@ dist/
   blog/<id>/index.html
   page/<name>/index.html
   assets/site.css
-  assets/site.js
+  assets/category-filters.js   (home/sitemap only)
+  assets/copy-code.js          (pages with code blocks only)
 ```
 
 ## Content authoring

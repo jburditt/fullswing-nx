@@ -114,7 +114,7 @@ class FakeWindow {
 }
 
 test('setupCategoryFilters should toggle pressed state and hide non-matching items', async () => {
-  const moduleUrl = new URL('../../src/assets/site.js', import.meta.url).href;
+  const moduleUrl = new URL('../../src/assets/category-filters.js', import.meta.url).href;
   const { setupCategoryFilters } = await import(moduleUrl);
 
   const angularButton = new FakeButton('angular', true);
@@ -132,7 +132,7 @@ test('setupCategoryFilters should toggle pressed state and hide non-matching ite
 });
 
 test('setupCategoryFilters should keep at least one category active', async () => {
-  const moduleUrl = new URL('../../src/assets/site.js', import.meta.url).href;
+  const moduleUrl = new URL('../../src/assets/category-filters.js', import.meta.url).href;
   const { setupCategoryFilters } = await import(moduleUrl);
 
   const angularButton = new FakeButton('angular', true);
@@ -147,7 +147,7 @@ test('setupCategoryFilters should keep at least one category active', async () =
 });
 
 test('setupCopyButtons should announce successful copy actions', async () => {
-  const moduleUrl = new URL('../../src/assets/site.js', import.meta.url).href;
+  const moduleUrl = new URL('../../src/assets/copy-code.js', import.meta.url).href;
   const { setupCopyButtons } = await import(moduleUrl);
 
   const button = new FakeButton('typescript', true);
@@ -174,7 +174,7 @@ test('setupCopyButtons should announce successful copy actions', async () => {
 });
 
 test('setupCopyButtons should announce copy failures', async () => {
-  const moduleUrl = new URL('../../src/assets/site.js', import.meta.url).href;
+  const moduleUrl = new URL('../../src/assets/copy-code.js', import.meta.url).href;
   const { setupCopyButtons } = await import(moduleUrl);
 
   const button = new FakeButton('typescript', true);

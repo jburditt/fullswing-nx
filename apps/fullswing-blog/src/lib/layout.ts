@@ -33,6 +33,8 @@ function renderCategoryPills(categories: string[]): string {
 export function renderLayout(options: LayoutOptions): string {
   const { route, assetPrefix, pageTitle, title, content, author, date, categories = [] } = options;
   const escapedAssetPrefix = escapeHtml(assetPrefix);
+  const usesCopyCode = content.includes('data-copy-code');
+  const usesCategoryFilters = content.includes('data-category-toggle');
   const headingMeta = author || date ? `
     <div class="page-meta post-byline">
       ${author ? `<img class="post-byline__avatar" src="${escapedAssetPrefix}assets/avatar.png" alt="Portrait of ${escapeHtml(author)}" />` : ''}
@@ -81,9 +83,10 @@ export function renderLayout(options: LayoutOptions): string {
           </div>
         </article>
       </main>
-      <p id="copy-status" class="visually-hidden" role="status" aria-live="polite"></p>
+      ${usesCopyCode ? '<p id="copy-status" class="visually-hidden" role="status" aria-live="polite"></p>' : ''}
     </div>
-    <script type="module" src="${escapedAssetPrefix}assets/site.js"></script>
+    ${usesCopyCode ? `<script type="module" src="${escapedAssetPrefix}assets/copy-code.js"></script>` : ''}
+    ${usesCategoryFilters ? `<script type="module" src="${escapedAssetPrefix}assets/category-filters.js"></script>` : ''}
   </body>
 </html>`;
 }

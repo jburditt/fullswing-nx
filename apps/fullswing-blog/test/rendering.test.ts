@@ -276,6 +276,21 @@ test('home and sitemap listings should render compact author metadata with route
   }
 });
 
+test('renderLayout should only load scripts needed by the page content', () => {
+  const base = { route: '/blog/example', assetPrefix: '../../', pageTitle: 'T', title: 'T' };
+  const plain = renderLayout({ ...base, content: '<p>Body</p>' });
+  const withCode = renderLayout({ ...base, content: '<pre><button data-copy-code></button></pre>' });
+  const withFilters = renderLayout({ ...base, content: '<button data-category-toggle="a"></button>' });
+
+  assert.doesNotMatch(plain, /<script/);
+  assert.doesNotMatch(plain, /copy-status/);
+  assert.match(withCode, /assets\/copy-code\.js/);
+  assert.match(withCode, /id="copy-status"/);
+  assert.doesNotMatch(withCode, /category-filters\.js/);
+  assert.match(withFilters, /assets\/category-filters\.js/);
+  assert.doesNotMatch(withFilters, /copy-code\.js|copy-status/);
+});
+
 test('renderLayout should include the external social navigation links', () => {
   const html = renderLayout({
     route: '/blog/example',

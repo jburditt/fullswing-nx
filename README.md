@@ -143,6 +143,11 @@ The sidecar JSON must use route `/page/<basename>`.
 - `/speckit-implement`
 - `/speckit-converge`
 
+## Set Encryption Key for Github Token stored on Storage instead of Secret Vault
+- Run `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"` to generate the secret
+- Run `gh secret set CMS_SECRET_ENCRYPTION_KEY` to set the secret in Github
+- Save the secret in your password manager
+
 ## To-Do
 
 - Determine if assets should be copied to dist but instead should be pre-rendered static html e.g. assets.js should not be needed and markdowns should be pre-rendered to html

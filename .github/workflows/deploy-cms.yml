@@ -21,8 +21,8 @@ jobs:
       AZURE_CLIENT_OBJECT_ID: ${{ vars.AZURE_CLIENT_OBJECT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_LOCATION: westus2
-      CMS_HOST_LOCATION: eastus
+      AZURE_LOCATION: canadacentral
+      CMS_HOST_LOCATION: canadacentral
       CMS_RESOURCE_GROUP: rg-fullswing-cms
       CONTENT_RESOURCE_GROUP: rg-fullswing-content
       CMS_APP_NAME: ${{ vars.CMS_APP_NAME }}

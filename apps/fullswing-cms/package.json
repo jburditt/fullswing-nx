@@ -8,13 +8,15 @@
     "clean": "node -e \"const fs=require(\\\"node:fs\\\");fs.rmSync(\\\".build\\\",{recursive:true,force:true});\"",
     "compile": "tsc -p tsconfig.json",
     "test": "npm run clean && npm run compile && node --test .build/test/**/*.test.js",
-    "start": "npm run compile && node --env-file=.env .build/src/index.js"
+    "start": "npm run compile && node --env-file=.env .build/src/index.js",
+    "start:production": "node .build/src/index.js"
   },
   "engines": {
     "node": ">=20.19.0"
   },
   "dependencies": {
     "@azure/msal-node": "7.0.0",
+    "@azure/storage-blob": "^12.34.0",
     "@fastify/cookie": "^11.1.2",
     "@fastify/formbody": "^9.0.0",
     "@fastify/static": "^10.1.5",

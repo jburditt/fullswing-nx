@@ -26,12 +26,22 @@ jobs:
       AZURE_ENV_NAME: fullswing-blog
       AZURE_LOCATION: westus2
       AZURE_RESOURCE_GROUP: rg-fullswing-blog
+      CMS_CONTENT_RESOURCE_GROUP: rg-fullswing-content
+      BLOG_STORAGE_CONTAINER_NAME: fullswing-cms-state
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Verify Blob content sync and compile static-site dependencies
+        run: |
+          node --test scripts/sync-blog-content.test.mjs
+          npm exec nx run-many -t compile --projects=content-model,markdown-renderer,fullswing-blog
 
       - uses: Azure/setup-azd@v2
 
@@ -45,6 +55,24 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Discover persistent CMS content storage
+        if: github.event_name == 'push' || inputs.action == 'up'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(az group exists --name "$CMS_CONTENT_RESOURCE_GROUP" --output tsv)" != "true" ]]; then
+            echo "BLOG_STORAGE_SYNC_ENABLED=false" >> "$GITHUB_ENV"
+            echo "Persistent CMS content storage is not provisioned yet; using repository content for this build."
+            exit 0
+          fi
+          storage_account_name="$(az storage account list --resource-group "$CMS_CONTENT_RESOURCE_GROUP" --query "[?tags.project=='fullswing-cms'].name | [0]" --output tsv)"
+          if [[ -z "$storage_account_name" ]]; then
+            echo "No content storage account exists in $CMS_CONTENT_RESOURCE_GROUP; deploy the CMS infrastructure first." >&2
+            exit 1
+          fi
+          echo "BLOG_STORAGE_ACCOUNT_NAME=$storage_account_name" >> "$GITHUB_ENV"
+          echo "BLOG_STORAGE_SYNC_ENABLED=true" >> "$GITHUB_ENV"
+
       - name: Deploy
         if: github.event_name == 'push' || inputs.action == 'up'
         shell: bash
@@ -52,6 +80,9 @@ jobs:
           set -euo pipefail
           ./scripts/ensure-resource-group.sh
           azd provision --no-prompt
+          if [[ "${BLOG_STORAGE_SYNC_ENABLED:-false}" == "true" ]]; then
+            node scripts/sync-blog-content.mjs
+          fi
           # Azure Resource Graph lags behind ARM tag writes; give it time to index before deploy looks up the tagged resource.
           sleep 30
           azd deploy --no-prompt

@@ -43,3 +43,22 @@ test('createCmsApp mounts authenticated CMS routes using the configured provider
   assert.equal(pages.statusCode, 200);
   assert.equal(editor.statusCode, 200);
 });
+
+test('createCmsApp can leave provider registration to a Blob-only deployment composition', async () => {
+  const contentProviders = new ContentProviderRegistry();
+  contentProviders.register('blob', (_settings, revision) => new FakeContentStorageProvider('blob', revision));
+  const app = await createCmsApp({
+    configurationStore: new FakeConfigurationStore(),
+    secretStore: new FakeSecretStore(),
+    identityProvider: new FakeIdentityProvider(),
+    sessionStore: new FakeSessionStore(),
+    allowlist: new FakeAdminAllowlist(),
+    contentProviders,
+    registerOneDrive: false,
+    sessionCookieSecret: 'test-cookie-secret-that-is-at-least-32-characters',
+    secureCookies: false,
+  });
+
+  assert.deepEqual(app.cmsDependencies.contentProviders.types(), ['blob']);
+  await app.close();
+});

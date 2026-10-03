@@ -7,11 +7,11 @@
 
 ### Provider boundary and shared content model
 
-**Decision**: Put a semantic `ContentStorageProvider` port and provider registry in `apps/fullswing-cms`. Inject the selected provider into CMS use cases at application startup. OneDrive is the production provider; local-file and in-memory demo providers are included for development. Do not implement Google Drive, a database provider, or cross-provider copying in this feature.
+**Decision**: Put a semantic `ContentStorageProvider` port and provider registry in `apps/fullswing-cms`. Inject the selected provider into CMS use cases at application startup. The Azure deployment composition registers Blob Storage as its sole content provider. OneDrive remains an optional adapter for compositions that register it; local-file and in-memory demo providers support development. Do not implement Google Drive, a database provider, or cross-provider copying in this feature.
 
 **Rationale**: Provider-specific IDs, paging, API errors, and concurrency tokens must stop at the adapter boundary. A semantic blog-pair save works for both file-based and record-based stores and avoids making CMS workflows depend on path or Graph concepts. The existing `ContentRepository` is not a database adapter: it accepts already loaded entries and its public entry types include static-publisher paths (`markdownPath`, `metadataPath`, `modulePath`). The shared behavior that is appropriate for reuse is metadata validation, not CMS persistence.
 
-**Alternatives considered**: Injecting OneDrive into route handlers (rejected because every workflow would become provider-specific); adding persistence methods to `ContentRepository` (rejected because its path-bound read model is not an I/O abstraction); treating local files as a production authority (rejected because local mode is a development composition, not a durable deployment adapter).
+**Alternatives considered**: Injecting Azure or OneDrive into route handlers (rejected because every workflow would become provider-specific); adding persistence methods to `ContentRepository` (rejected because its path-bound read model is not an I/O abstraction); treating local files as the Azure deployment authority (rejected because local mode is a development composition).
 
 ### Local file layout and page source editing
 
@@ -20,6 +20,34 @@
 **Rationale**: Blog files must remain discoverable by the existing publisher. Year-based directories are already part of its source layout. Keeping page source in a separate `pages` tree avoids confusing it with published `.ts` renderers and avoids implying that saving HTML makes it publishable or executable.
 
 **Operational constraint**: `file-composition.mjs` is local-development-only and still uses in-memory configuration, session, and secret stores. The public-directory selection resets on restart; content files remain on disk.
+
+### Azure Blob content and runtime persistence
+
+**Decision**: Add a Blob-backed content provider and Azure deployment composition without coupling application services to Azure. `BlobContentStorageProvider` stores matched content pairs below the configured prefix (default `content/`): blog Markdown/JSON under `blog/<YYYY>/` and page HTML/JSON under `pages/<YYYY>/`. Pair eTags supply opaque versions and conditional writes; compensation is attempted when a two-blob write cannot complete. `BlobConfigurationStore` writes versioned configuration JSON with ETag conditional updates. `EncryptedBlobSecretStore` implements the existing `SecretStore` port and encrypts every secret value with AES-256-GCM, a fresh 96-bit nonce, and the secret reference as authenticated additional data before writing an envelope to Blob Storage. The key is a separately configured base64-encoded 32-byte host setting. The composition uses an in-memory `SessionStore` and registers no OneDrive provider.
+
+**Rationale**: Blob Storage is the single content and runtime-state authority for this Azure deployment. Keeping content, configuration, and secret access behind their existing CMS-owned ports avoids making authoring services Azure-specific. Other compositions can register OneDrive without changing CMS workflows. Keeping `SecretStore` unchanged allows a future vault implementation to replace it. Authenticated encryption prevents Blob contents alone from revealing saved GitHub credentials or the serialized MSAL cache. Volatile sessions are an explicit deployment tradeoff: restart requires a fresh administrator sign-in.
+
+**Operational constraints**: `blob-composition.mjs` reads its Blob connection string, encryption key, Entra client settings, administrator object IDs, and cookie secret from the host environment. It creates the named container if absent; the container must remain private and access must be restricted to the CMS. Content is isolated under its prefix from the `configuration.json` object and `secrets/` prefix in the same container. The composition requests only Entra identity scopes (`openid`, `profile`, `email`), not Microsoft Graph file permissions. The encryption key must be backed up separately. Losing it makes stored secrets unreadable; rotating it requires decrypting and re-encrypting existing secrets. This composition does not provision or select the Node host, storage account, or HTTPS endpoint, and it does not synchronize Blob content into the static blog generator's repository.
+
+**Alternatives considered**: Storing secrets as plaintext Blobs (rejected because storage access alone would reveal them); putting the encryption key beside ciphertext (rejected because it would defeat the separation); coupling services directly to Azure APIs or Key Vault (rejected to preserve the `SecretStore` swap boundary); persisting sessions in Blob Storage (deferred because in-memory sessions are explicitly acceptable for the current deployment).
+
+**Content consistency**: Azure Blob does not provide an atomic transaction across the Markdown/HTML body and JSON metadata blobs. Creates use conditional nonexistence checks; updates use each blob's ETag and attempt compensation if the second write fails. If compensation or a move cleanup fails, the provider returns an explicit partial-write error rather than claiming success.
+
+### Azure App Service and static publishing
+
+**Decision**: Host Fastify on Linux App Service F1 in a dedicated CMS resource group, keep the Blob storage account in a separate persistent content resource group, and leave the static-site resource group unchanged. A manual GitHub Actions workflow provisions/deploys the CMS with federated Azure login. The existing static-blog workflow uses its OIDC principal with container-scoped read access to list/download the Blob blog prefix before `azd deploy` runs the repository-based static build.
+
+**Rationale**: App Service can run the current Node/Fastify server without converting routes to Functions. Separating resource groups prevents the current blog `azd down` lifecycle from deleting CMS content. GitHub OIDC and data-plane RBAC avoid storing a storage key in the static-blog workflow.
+
+**Operational constraints**: F1 is a shared, quota-limited plan without custom domains or SLA; restarts lose in-memory sessions. Blob content is first seeded only when explicitly requested and only if the blog prefix is empty. The static sync downloads to a staging directory, validates complete Markdown/JSON pairs, then swaps the local blog directory so a failed or empty fetch cannot publish stale/partial output. The Blob free offer is limited to its published first-12-month eligibility; budgets must account for later charges.
+
+**Build/deploy implementation**: The manual CMS workflow runs tests and compiles `content-model`, `markdown-renderer`, and CMS before packaging their production runtime files. It disables App Service remote build and starts `apps/fullswing-cms/.build/src/index.js` directly from the package root. The static workflow uses Azure CLI list/download calls after OIDC login; the sync script strips `content/blog/`, stages each validated file, and atomically replaces `public/blog` only after every download succeeds.
+
+**Open deployment gate**: Live provisioning is not verified in this repository session. GitHub repository settings, the Entra redirect registration, and Azure federated/RBAC permissions must be configured before the manual workflow can run. The F1/Blob resources and first seed must then be exercised before enabling unattended deployments.
+
+**Build/deploy implementation**: The manual CMS workflow runs tests and compiles `content-model`, `markdown-renderer`, and CMS before packaging their production runtime files. It disables App Service remote build and starts `apps/fullswing-cms/.build/src/index.js` directly from the package root. The static workflow uses Azure CLI `download` calls after OIDC login rather than relying on an ambiguous local path mapping from `download-batch`; the sync script strips `content/blog/`, stages each validated file, and atomically replaces `public/blog` only after every download succeeds.
+
+**Open deployment gate**: Live provisioning is not verified in this repository session. The GitHub repository must define the listed vars/secrets, the Entra application must have the generated callback URL, and the federated principal must be able to create resource groups and the container-scoped role assignment. The F1/Blob resources and first seed must then be exercised with a manual workflow run before enabling unattended deployments.
 
 ### Metadata compatibility
 
@@ -45,15 +73,15 @@
 
 **Alternatives considered**: A client-only SPA (rejected because it moves more authorization and token handling to the browser); extending the static blog generator (rejected because its filesystem discovery, public layout, and build lifecycle are publisher-specific).
 
-### Microsoft Entra and OneDrive access
+### Microsoft Entra authentication and optional OneDrive access
 
-**Decision**: Use the Microsoft Entra authorization-code web-app flow through the supported MSAL Node library. Request the delegated Microsoft Graph `Files.ReadWrite` permission needed for folder listing and content writes, check the configured allowlist using the immutable `(tenantId, objectId)` identity pair, and keep the MSAL cache and session data server-side. Do not request application-level file permissions. Configure the OneDrive `driveId` and root `folderId` separately from deployment-owned Entra credentials. A user who is allowlisted but lacks access to the configured folder receives a non-sensitive integration error.
+**Decision**: Use the Microsoft Entra authorization-code web-app flow through the supported MSAL Node library, check the configured allowlist using the immutable `(tenantId, objectId)` identity pair, and keep the MSAL cache and session data server-side. The Azure Blob composition requests `openid`, `profile`, and `email` only; it does not request Microsoft Graph file permissions. Compositions that register OneDrive request delegated `Files.ReadWrite`, configure `driveId` and root `folderId` separately from Entra credentials, and report a non-sensitive integration error if an allowlisted administrator lacks access. No composition requests app-only file permissions.
 
-**Rationale**: The auth-code flow is intended for server-based web apps and lets Graph operations run within the signed-in administrator's existing drive access rather than granting an app independent tenant-wide file access. Every allowlisted administrator must have permission to the configured folder; there is no app-only fallback. Microsoft recommends supported authentication libraries instead of hand-crafting protocol requests. The app must still validate `state`, use the library's OIDC protections, protect CSRF-sensitive writes, and never expose tokens.
+**Rationale**: The auth-code flow is intended for server-based web apps. When OneDrive is enabled, delegated access uses the signed-in administrator's drive permissions rather than granting an app independent tenant-wide file access. Microsoft recommends supported authentication libraries instead of hand-crafting protocol requests. The app must still validate `state`, use the library's OIDC protections, protect CSRF-sensitive writes, and never expose tokens.
 
 **Alternatives considered**: App-only Graph permissions (not selected because file permissions operate independently of the signed-in administrator and require tenant authorization); browser-held Graph tokens (rejected because the app is server-rendered and tokens must remain server-side); raw OAuth HTTP requests (rejected in favor of MSAL).
 
-**Operational constraint**: A production session/token-cache store must be supplied by the deployment. This feature defines an injectable server-side store and test fake; it does not select a hosting platform or add deployment infrastructure.
+**Operational constraint**: The Azure composition persists the MSAL cache through the encrypted Blob `SecretStore` but does not persist sessions. The feature supplies a Blob-backed composition, not a complete Azure Node-host deployment or infrastructure provisioning.
 
 ### GitHub workflow dispatch
 

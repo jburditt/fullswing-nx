@@ -15,8 +15,8 @@ export interface ConfigurationViewOptions {
 
 export function renderConfigurationPage(options: ConfigurationViewOptions): string {
   const configuration = options.configuration;
-  const providerType = configuration?.contentProvider.type ?? 'onedrive';
-  const providerNames: Record<string, string> = { demo: 'Local demo', file: 'Local files', onedrive: 'OneDrive' };
+  const providerType = configuration?.contentProvider.type ?? options.availableProviderTypes?.[0] ?? 'onedrive';
+  const providerNames: Record<string, string> = { blob: 'Azure Blob Storage', demo: 'Local demo', file: 'Local files', onedrive: 'OneDrive' };
   const providerTypes = new Set([...(options.availableProviderTypes ?? []), providerType]);
   const providerOptions = [...providerTypes].map(type => `<option value="${escapeHtml(type)}"${providerType === type ? ' selected' : ''}>${escapeHtml(providerNames[type] ?? type)}</option>`).join('');
   const providerSettings = configuration?.contentProvider.settings ?? {};

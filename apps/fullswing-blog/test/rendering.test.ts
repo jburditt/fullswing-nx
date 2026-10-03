@@ -38,6 +38,9 @@ test('renderMarkdown should add line numbers and highlighted lines for fenced co
   assert.match(defaultNumberedHtml, /class="code-block has-line-numbers"/);
   assert.match(defaultNumberedHtml, /data-line-number="1"/);
   assert.match(defaultNumberedHtml, /data-line-number="2"/);
+  assert.match(defaultNumberedHtml, /class="copy-code" data-copy-code aria-label="Copy code" title="Copy"/);
+  assert.match(defaultNumberedHtml, /class="copy-code__icon" aria-hidden="true"/);
+  assert.match(defaultNumberedHtml, /class="copy-code__label" aria-hidden="true">Copied!<\/span>/);
   assert.doesNotMatch(defaultNumberedHtml, /<\/span>\s+<span class="code-line/);
 });
 

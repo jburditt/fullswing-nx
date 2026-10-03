@@ -261,18 +261,42 @@ body {
 
 .copy-code {
   position: absolute;
+  z-index: 1;
   top: 0.75rem;
   right: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
   color: var(--code-text);
-  border-radius: 999px;
-  padding: 0.35rem 0.7rem;
+  border-radius: 0.375rem;
+  padding: 0;
   cursor: pointer;
 }
 
 .copy-code[data-copied="true"] {
   background: rgba(52, 211, 153, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: auto;
+  padding: 0.35rem 0.6rem;
+}
+
+.copy-code__icon {
+  display: block;
+  pointer-events: none;
+}
+
+.copy-code__label {
+  display: none;
+  pointer-events: none;
+}
+
+.copy-code[data-copied="true"] .copy-code__label {
+  display: inline;
 }
 
 .code-block code {

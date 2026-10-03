@@ -12,6 +12,8 @@ class FakeButton {
   constructor(category: string, pressed: boolean) {
     this.attributes.set('data-category-toggle', category);
     this.attributes.set('aria-pressed', String(pressed));
+    this.attributes.set('aria-label', 'Copy code');
+    this.attributes.set('title', 'Copy');
   }
 
   addEventListener(_eventName: string, handler: () => void): void {
@@ -165,10 +167,9 @@ test('setupCopyButtons should announce successful copy actions', async () => {
   await button.click();
 
   assert.equal(copiedText, 'const title = 1;');
-  assert.equal(button.textContent, 'Copied');
+  assert.equal(button.getAttribute('aria-label'), 'Copy code');
   assert.equal(status.textContent, 'Code copied to clipboard.');
   runtimeWindow.flush();
-  assert.equal(button.textContent, 'Copy');
   assert.equal(status.textContent, '');
 });
 
@@ -191,10 +192,10 @@ test('setupCopyButtons should announce copy failures', async () => {
   setupCopyButtons(new FakeDocument([button], [], status), clipboard, runtimeWindow);
   await button.click();
 
-  assert.equal(button.textContent, 'Copy failed');
+  assert.equal(button.getAttribute('aria-label'), 'Copy code');
   assert.equal(status.textContent, 'Unable to copy code to the clipboard.');
   assert.equal(button.dataset.copied, 'false');
   runtimeWindow.flush();
-  assert.equal(button.textContent, 'Copy');
+  assert.equal(button.getAttribute('aria-label'), 'Copy code');
   assert.equal(status.textContent, '');
 });

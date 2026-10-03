@@ -50,7 +50,6 @@ function scheduleReset(button, status, runtimeWindow) {
 
   const timer = runtimeWindow.setTimeout(() => {
     button.dataset.copied = 'false';
-    button.textContent = 'Copy';
     if (status) {
       status.textContent = '';
     }
@@ -79,7 +78,6 @@ export function setupCopyButtons(
 
       if (!clipboard?.writeText) {
         button.dataset.copied = 'false';
-        button.textContent = 'Copy unavailable';
         if (status) {
           status.textContent = 'Clipboard access is unavailable in this browser.';
         }
@@ -90,14 +88,12 @@ export function setupCopyButtons(
       try {
         await clipboard.writeText(text);
         button.dataset.copied = 'true';
-        button.textContent = 'Copied';
         if (status) {
           status.textContent = 'Code copied to clipboard.';
         }
         scheduleReset(button, status, runtimeWindow);
       } catch (error) {
         button.dataset.copied = 'false';
-        button.textContent = 'Copy failed';
         if (status) {
           status.textContent = 'Unable to copy code to the clipboard.';
         }

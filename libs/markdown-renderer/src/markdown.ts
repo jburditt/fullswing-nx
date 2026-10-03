@@ -280,7 +280,13 @@ function renderCodeBlock(code: string, rawInfo: string | undefined): string {
 
   return [
     `<pre class="${preClass}" data-language="${escapeHtml(fenceOptions.language || 'plain-text')}">`,
-    '<button type="button" class="copy-code" data-copy-code>Copy</button>',
+    '<button type="button" class="copy-code" data-copy-code aria-label="Copy code" title="Copy">',
+    '<svg class="copy-code__icon" aria-hidden="true" focusable="false" viewBox="0 0 20 20" width="16" height="16" fill="currentColor">',
+    '<path d="M0 6.75C0 5.784.784 5 1.75 5h8.5C11.216 5 12 5.784 12 6.75v10.5A1.75 1.75 0 0 1 10.25 19h-8.5A1.75 1.75 0 0 1 0 17.25Zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25V6.75a.25.25 0 0 0-.25-.25Z"></path>',
+    '<path d="M5 3.25A1.75 1.75 0 0 1 6.75 1.5h8.5A1.75 1.75 0 0 1 17 3.25v10.5a1.75 1.75 0 0 1-1.75 1.75h-.5a.75.75 0 0 1 0-1.5h.5a.25.25 0 0 0 .25-.25V3.25a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25v.5a.75.75 0 0 1-1.5 0Z"></path>',
+    '</svg>',
+    '<span class="copy-code__label" aria-hidden="true">Copied!</span>',
+    '</button>',
     attribution,
     `<code class="${languageClass.trim()}">`,
     codeLines,

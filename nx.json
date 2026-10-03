@@ -5,31 +5,46 @@
       "outputs": [
         "{projectRoot}/.build"
       ],
-      "cache": true
+      "cache": true,
+      "dependsOn": [
+        "^compile"
+      ]
     },
     "build": {
       "outputs": [
         "{projectRoot}/.build",
         "{projectRoot}/dist"
       ],
-      "cache": true
+      "cache": true,
+      "dependsOn": [
+        "^compile"
+      ]
     },
     "build:once": {
       "outputs": [
         "{projectRoot}/.build",
         "{projectRoot}/dist"
       ],
-      "cache": true
+      "cache": true,
+      "dependsOn": [
+        "^compile"
+      ]
     },
     "verify": {
       "outputs": [
         "{projectRoot}/.build",
         "{projectRoot}/dist"
       ],
-      "cache": true
+      "cache": true,
+      "dependsOn": [
+        "^compile"
+      ]
     },
     "test": {
-      "cache": false
+      "cache": false,
+      "dependsOn": [
+        "^compile"
+      ]
     },
     "clean": {
       "cache": false

@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Install workspace dependencies
         run: npm ci
@@ -41,7 +41,7 @@ jobs:
       - name: Verify Blob content sync and compile static-site dependencies
         run: |
           node --test scripts/sync-blog-content.test.mjs
-          npm exec nx run-many -t compile --projects=content-model,markdown-renderer,fullswing-blog
+          npm exec nx -- run-many -t compile --projects=content-model,markdown-renderer,fullswing-blog
 
       - uses: Azure/setup-azd@v2
 

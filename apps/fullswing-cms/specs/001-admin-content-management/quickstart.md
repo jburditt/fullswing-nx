@@ -2,12 +2,8 @@
 
 ## Prerequisites
 
-- Node.js 20.19 or later and npm dependencies installed at the workspace root.
-- For automated checks, no Microsoft tenant, OneDrive credentials, GitHub credentials, or network access is required; integrations use test doubles.
-- For a OneDrive adapter smoke test in a composition that registers OneDrive, a test Entra app/tenant, an allowlisted administrator, and a test OneDrive folder shared with that administrator are required.
-- For the Azure composition smoke test, an Azure Storage account and private Blob container (or permission for the composition to create it), plus the required host settings below, are required. No Microsoft Graph file permission or OneDrive folder is needed.
 
-## Automated Validation
+ Node.js 22.12 or later and npm dependencies installed at the workspace root. The Azure host and deployment workflow use Node 24 LTS.
 
 Run from the workspace root:
 
@@ -52,14 +48,14 @@ Build the CMS, then run it with `CMS_BOOTSTRAP_MODULE=./blob-composition.mjs`. C
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
-Keep the key outside the Blob container and back it up securely. Verify the container is private, sign in as an allowlisted administrator, select Azure Blob Storage, and configure the GitHub workflow. Create and edit a blog and an HTML page; confirm the pairs appear under `content/blog/<year>/` and `content/pages/<year>/`, then force a stale edit and confirm it is rejected. Restart the CMS: content, configuration, and credentials remain stored, while the administrator must sign in again because sessions are in memory. Confirm OneDrive is not offered or called. This smoke test covers CMS persistence only: the current static blog deployment builds from repository content and does not yet publish Blob-stored CMS content. The composition also does not provision an Azure Node host, storage account, or HTTPS endpoint.
+Keep the key outside the Blob container and back it up securely. Verify the container is private, sign in as an allowlisted administrator, select Azure Blob Storage, and configure the GitHub workflow. Create and edit a blog and an HTML page; confirm the pairs appear under `content/blog/<year>/` and `content/pages/<year>/`, then force a stale edit and confirm it is rejected. Restart the CMS: content, configuration, and credentials remain stored, while the administrator must sign in again because sessions are in memory. Confirm OneDrive is not offered or called. This local smoke test covers CMS persistence; use the First Azure Deployment steps below to verify Blob content is synced into the static build. The composition itself does not provision the App Service or storage account.
 
 ## Azure Deployment
 
 1. Configure GitHub repository variables `AZURE_CLIENT_ID`, `AZURE_CLIENT_OBJECT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `CMS_APP_NAME`, `CMS_ENTRA_CLIENT_ID`, and `CMS_ADMIN_OBJECT_IDS`.
 2. Configure GitHub secrets `CMS_ENTRA_CLIENT_SECRET`, `CMS_SECRET_ENCRYPTION_KEY` (base64-encoded random 32-byte key), and `CMS_SESSION_COOKIE_SECRET` (at least 32 random characters).
 3. Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` in the CMS Entra application as a web redirect URI. Use a separate CMS Entra app from the GitHub deployment principal.
-4. Grant the GitHub deployment principal permissions to create the two resource groups and assign `Storage Blob Data Reader` on the private container. Deployments use `rg-fullswing-content`, `rg-fullswing-cms`, and the existing `rg-fullswing-blog` independently.
+4. Grant the GitHub deployment principal permission to create `rg-fullswing-cms` and `rg-fullswing-content`, and assign `Storage Blob Data Reader` on the private container. The existing `rg-fullswing-blog` remains independent.
 5. Run `.github/workflows/deploy-cms.yml` manually. On the first run, enable `seed_initial_content` to copy `apps/fullswing-blog/public/blog/` into an empty `content/blog/` prefix. Later runs do not overwrite or reseed content.
 6. Set up the CMS through its Configuration page, then deploy the static blog. Its workflow syncs Blob blogs into `apps/fullswing-blog/public/blog/` before the existing static build. The sync removes stale local files and fails closed if Blob returns an empty or incomplete set.
 
@@ -71,7 +67,7 @@ Only for a non-Azure composition that registers OneDrive: configure a test tenan
 
 ## First Azure Deployment
 
-Follow the GitHub repository variables/secrets and Entra callback setup in the [CMS README](../../README.md#first-azure-deployment). Ensure the Azure federated principal can create the two resource groups and assign the container-scoped `Storage Blob Data Reader` role. Run **Deploy Fullswing CMS to Azure App Service** manually with `seed_initial_content` enabled for the initial migration; later deployments must leave it disabled. The workflow has no destroy action, and `rg-fullswing-content` must remain separate from `rg-fullswing-cms` and `rg-fullswing-blog`.
+Follow the GitHub repository variables/secrets and Entra callback setup in the [CMS README](../../README.md#first-azure-deployment). Ensure the Azure federated principal can deploy the App Service in `rg-fullswing-cms`, storage in `rg-fullswing-content`, and assign the container-scoped `Storage Blob Data Reader` role. Run **Deploy Fullswing CMS to Azure App Service** manually with `seed_initial_content` enabled for the initial migration; later deployments must leave it disabled. The workflow has no destroy action; both app groups remain separate from persistent content.
 
 After the CMS smoke test passes, run the static-blog deployment. It discovers the storage account in `rg-fullswing-content`, downloads Blob blog pairs before the existing build, and fails closed when the Blob prefix is empty or incomplete. The blog deployment's existing `down` action affects only `rg-fullswing-blog`.
 

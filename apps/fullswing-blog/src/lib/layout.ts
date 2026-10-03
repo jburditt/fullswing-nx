@@ -35,6 +35,7 @@ export function renderLayout(options: LayoutOptions): string {
   const escapedAssetPrefix = escapeHtml(assetPrefix);
   const usesCopyCode = content.includes('data-copy-code');
   const usesCategoryFilters = content.includes('data-category-toggle');
+  const usesCheckboxes = content.includes('<input type="checkbox"');
   const headingMeta = author || date ? `
     <div class="page-meta post-byline">
       ${author ? `<img class="post-byline__avatar" src="${escapedAssetPrefix}assets/avatar.png" alt="Portrait of ${escapeHtml(author)}" />` : ''}
@@ -86,6 +87,7 @@ export function renderLayout(options: LayoutOptions): string {
       ${usesCopyCode ? '<p id="copy-status" class="visually-hidden" role="status" aria-live="polite"></p>' : ''}
     </div>
     ${usesCopyCode ? `<script type="module" src="${escapedAssetPrefix}assets/copy-code.js"></script>` : ''}
+    ${usesCheckboxes ? `<script type="module" src="${escapedAssetPrefix}assets/checkboxes.js"></script>` : ''}
     ${usesCategoryFilters ? `<script type="module" src="${escapedAssetPrefix}assets/category-filters.js"></script>` : ''}
   </body>
 </html>`;

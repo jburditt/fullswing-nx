@@ -307,3 +307,19 @@ Each story has a separate independent test criterion above. Automated tests are 
 - [x] T090 Run `npm exec nx run fullswing-cms:test`; all 96 CMS tests pass.
 
 **Operational boundary**: This phase stores content under `content/` in the same private container as configuration and encrypted secrets. It does not provision Azure hosting, perform an automatic migration from OneDrive or local files, or synchronize Blob content into the static blog publisher's repository.
+
+## Phase 13: Azure F1 Deployment and Blob Publishing Sync
+
+**Purpose**: Provision the CMS on Azure App Service Linux F1 without coupling its lifecycle to the static site or persistent content, and stage authoritative Blob blogs before each static-site build.
+
+- [x] T091 Add sync tests for prefix mapping, stale-file removal, malformed/empty pairs, and preservation of the previous directory on download failure in `scripts/sync-blog-content.test.mjs`.
+- [x] T092 Implement the Azure CLI-based Blob sync utility with path validation and staged directory replacement in `scripts/sync-blog-content.mjs`.
+- [x] T093 Add an App Service production start command that does not require the gitignored `.env` file in `apps/fullswing-cms/package.json`.
+- [x] T094 Add separate content-storage and CMS-host Bicep templates for `rg-fullswing-content` and `rg-fullswing-cms`, including scoped Blob Data Reader access for the static build identity in `apps/fullswing-cms/infra/content-storage.bicep` and `apps/fullswing-cms/infra/cms-host.bicep`.
+- [x] T095 Add a manually triggered CMS workflow to test/build the workspace, provision persistent Blob and Linux F1 resources, optionally seed an empty blog prefix, and deploy the compiled package without a destroy path in `.github/workflows/deploy-cms.yml`.
+- [x] T096 Update the static deployment workflow to compile workspace libraries and sync Blob blogs into `apps/fullswing-blog/public/blog/` before the existing static build in `.github/workflows/deploy.yml`.
+- [x] T097 Document GitHub settings, Entra callback, RBAC prerequisites, seed procedure, separate resource groups, and tier limitations in `apps/fullswing-cms/README.md`, `specs/001-admin-content-management/quickstart.md`, and the feature design artifacts.
+- [x] T098 Run the sync utility tests, CMS tests, static-blog verification, and Bicep diagnostics; identify GitHub repository settings as prerequisites for T099.
+- [ ] T099 Configure the GitHub repository variables/secrets, Entra redirect URI, and Azure federated/RBAC permissions; manually deploy the CMS with `seed_initial_content=true`; verify CMS login, Blob saves, and the subsequent static Blob-to-site build.
+
+**Operational boundary**: Local tests validate package behavior but do not provision Azure or exercise live Entra/Blob access. Task T099 remains a manual cloud deployment and smoke-test gate. Blob is free only within the applicable first-12-month offer; App Service F1 has strict CPU, bandwidth, and availability limits.

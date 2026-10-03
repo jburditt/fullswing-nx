@@ -1,0 +1,132 @@
+name: Deploy Fullswing CMS to Azure App Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed_initial_content:
+        description: 'Copy current repository blogs into an empty Blob content prefix on first deployment'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_OBJECT_ID: ${{ vars.AZURE_CLIENT_OBJECT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_LOCATION: westus2
+      CMS_RESOURCE_GROUP: rg-fullswing-cms
+      CONTENT_RESOURCE_GROUP: rg-fullswing-content
+      CMS_APP_NAME: ${{ vars.CMS_APP_NAME }}
+      CMS_ENTRA_CLIENT_ID: ${{ vars.CMS_ENTRA_CLIENT_ID }}
+      CMS_ADMIN_OBJECT_IDS: ${{ vars.CMS_ADMIN_OBJECT_IDS }}
+      CMS_ENTRA_CLIENT_SECRET: ${{ secrets.CMS_ENTRA_CLIENT_SECRET }}
+      CMS_SECRET_ENCRYPTION_KEY: ${{ secrets.CMS_SECRET_ENCRYPTION_KEY }}
+      CMS_SESSION_COOKIE_SECRET: ${{ secrets.CMS_SESSION_COOKIE_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+
+      - name: Install, test, and compile workspace packages
+        run: |
+          npm ci
+          npm exec nx run fullswing-cms:test
+          npm exec nx run-many -t compile --projects=content-model,markdown-renderer,fullswing-cms
+
+      - name: Prepare production package
+        run: |
+          npm prune --omit=dev
+          mkdir -p .deploy
+          zip -qr .deploy/fullswing-cms.zip \
+            package.json package-lock.json node_modules \
+            apps/fullswing-cms/package.json \
+            apps/fullswing-cms/.build \
+            apps/fullswing-cms/public \
+            apps/fullswing-cms/blob-composition.mjs \
+            libs/content-model/package.json libs/content-model/.build \
+            libs/markdown-renderer/package.json libs/markdown-renderer/.build
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Provision persistent content storage
+        id: content
+        shell: bash
+        run: |
+          set -euo pipefail
+          az group create --name "$CONTENT_RESOURCE_GROUP" --location "$AZURE_LOCATION" --output none
+          storage_account_name="$(az deployment group create \
+            --resource-group "$CONTENT_RESOURCE_GROUP" \
+            --template-file apps/fullswing-cms/infra/content-storage.bicep \
+            --parameters staticBuildPrincipalObjectId="$AZURE_CLIENT_OBJECT_ID" \
+            --query 'properties.outputs.storageAccountName.value' --output tsv)"
+          connection_string="$(az storage account show-connection-string \
+            --resource-group "$CONTENT_RESOURCE_GROUP" \
+            --name "$storage_account_name" \
+            --query connectionString --output tsv)"
+          echo "::add-mask::$connection_string"
+          echo "CMS_STORAGE_ACCOUNT_NAME=$storage_account_name" >> "$GITHUB_ENV"
+          echo "CMS_BLOB_CONNECTION_STRING=$connection_string" >> "$GITHUB_ENV"
+          echo "CMS_BLOB_CONTAINER_NAME=fullswing-cms-state" >> "$GITHUB_ENV"
+
+      - name: Seed initial blog content when requested
+        if: inputs.seed_initial_content == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing_count="$(az storage blob list \
+            --connection-string "$CMS_BLOB_CONNECTION_STRING" \
+            --container-name "$CMS_BLOB_CONTAINER_NAME" \
+            --prefix content/blog/ \
+            --query 'length(@)' --output tsv)"
+          if [[ "$existing_count" != "0" ]]; then
+            echo "Refusing to seed: content/blog/ already contains $existing_count blobs." >&2
+            exit 1
+          fi
+          az storage blob upload-batch \
+            --connection-string "$CMS_BLOB_CONNECTION_STRING" \
+            --destination "$CMS_BLOB_CONTAINER_NAME" \
+            --destination-path content/blog \
+            --source apps/fullswing-blog/public/blog \
+            --no-progress --only-show-errors
+
+      - name: Provision isolated CMS host
+        shell: bash
+        run: |
+          set -euo pipefail
+          az group create --name "$CMS_RESOURCE_GROUP" --location "$AZURE_LOCATION" --output none
+          az deployment group create \
+            --resource-group "$CMS_RESOURCE_GROUP" \
+            --template-file apps/fullswing-cms/infra/cms-host.bicep \
+            --parameters \
+              cmsAppName="$CMS_APP_NAME" \
+              blobConnectionString="$CMS_BLOB_CONNECTION_STRING" \
+              blobContainerName="$CMS_BLOB_CONTAINER_NAME" \
+              secretEncryptionKey="$CMS_SECRET_ENCRYPTION_KEY" \
+              entraTenantId="$AZURE_TENANT_ID" \
+              entraClientId="$CMS_ENTRA_CLIENT_ID" \
+              entraClientSecret="$CMS_ENTRA_CLIENT_SECRET" \
+              entraRedirectUri="https://${CMS_APP_NAME}.azurewebsites.net/auth/callback" \
+              adminObjectIds="$CMS_ADMIN_OBJECT_IDS" \
+              sessionCookieSecret="$CMS_SESSION_COOKIE_SECRET" \
+            --output none
+
+      - name: Deploy CMS package
+        run: az webapp deploy --resource-group "$CMS_RESOURCE_GROUP" --name "$CMS_APP_NAME" --src-path .deploy/fullswing-cms.zip --type zip
+
+      - name: Check CMS login endpoint
+        run: curl --fail --silent --show-error --retry 6 --retry-all-errors --retry-delay 10 "https://${CMS_APP_NAME}.azurewebsites.net/login" --output /dev/null

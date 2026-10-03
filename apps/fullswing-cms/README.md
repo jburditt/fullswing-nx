@@ -38,7 +38,53 @@ To use the Azure Blob composition, set `CMS_BOOTSTRAP_MODULE=./blob-composition.
 - `CMS_ADMIN_OBJECT_IDS`: comma-separated immutable Entra object IDs in the configured tenant.
 - `CMS_SESSION_COOKIE_SECRET`: random secret of at least 32 characters.
 
-The Configuration page is persisted in Blob Storage. GitHub credentials and the delegated MSAL token cache are encrypted before storage. Sessions are deliberately not persisted. The Azure host must run the compiled CMS with Node.js 20.19 or later and provide HTTPS; this composition does not provision the host or storage account. Startup fails if required settings are missing or invalid.
+The Configuration page is persisted in Blob Storage. GitHub credentials and the delegated MSAL token cache are encrypted before storage. Sessions are deliberately not persisted. The App Service host runs the compiled CMS with Node.js 20 and provides HTTPS. Infrastructure is defined in `infra/content-storage.bicep` and `infra/cms-host.bicep`; `.github/workflows/deploy-cms.yml` provisions and deploys these resources without a destroy path. Startup fails if required settings are missing or invalid.
+
+### First Azure Deployment
+
+Configure these GitHub repository variables before manually running **Deploy Fullswing CMS to Azure App Service**:
+
+- `AZURE_CLIENT_ID`, `AZURE_CLIENT_OBJECT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` for the GitHub Actions federated principal.
+- `CMS_APP_NAME`, a globally unique App Service name.
+- `CMS_ENTRA_CLIENT_ID` and `CMS_ADMIN_OBJECT_IDS` for a separate Entra web-app registration and the allowlisted administrators.
+
+Configure these GitHub repository secrets:
+
+- `CMS_ENTRA_CLIENT_SECRET` for the CMS Entra app.
+- `CMS_SECRET_ENCRYPTION_KEY`, a base64-encoded random 32-byte key.
+- `CMS_SESSION_COOKIE_SECRET`, a random string of at least 32 characters.
+
+Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` as a Web redirect URI in the CMS Entra application. The GitHub deployment principal needs permission to create resource groups and to create a scoped Blob data role assignment. Use an owner or delegate role-assignment permissions before running the workflow.
+
+On the first workflow run, set `seed_initial_content` to `true` to copy the repository's current blog pairs into an empty `content/blog/` Blob prefix. It refuses to overwrite a non-empty prefix. After that, CMS edits in Blob become authoritative. The Static Web App workflow reads that prefix with its federated identity and stages the files into `apps/fullswing-blog/public/blog/` before building.
+
+The CMS host uses App Service Linux F1, which has strict CPU and bandwidth quotas, no custom domain or SLA, and may cold-start or restart. The Blob free allowance is only for the first 12 months for eligible new Azure accounts; storage and transaction charges may apply afterward. The content resource group is deliberately separate and neither deployment workflow deletes it.
+
+## Azure Deployment
+
+The CMS deployment is isolated from the static blog deployment:
+
+- `rg-fullswing-content` holds the persistent storage account and is not deleted by either app's deployment workflow.
+- `rg-fullswing-cms` holds the Linux App Service F1 host. The CMS workflow is manual (`workflow_dispatch`) and has no destroy action.
+- The existing `rg-fullswing-blog` workflow deploys the Static Web App. Once Blob storage exists, it downloads `content/blog/` into `apps/fullswing-blog/public/blog/` before building the site. If the content resource group does not exist, it continues using repository content; once storage exists, an empty or incomplete Blob prefix fails the deployment.
+
+Before running `.github/workflows/deploy-cms.yml`, configure these GitHub repository variables:
+
+- `AZURE_CLIENT_ID`, `AZURE_CLIENT_OBJECT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` for the GitHub Actions federated service principal.
+- `CMS_APP_NAME`, a globally unique App Service name.
+- `CMS_ENTRA_CLIENT_ID` and `CMS_ADMIN_OBJECT_IDS` for a separate Entra web-app registration and its allowlisted administrators.
+
+Configure these GitHub repository secrets:
+
+- `CMS_ENTRA_CLIENT_SECRET` for the CMS Entra registration.
+- `CMS_SECRET_ENCRYPTION_KEY`, a base64-encoded random 32-byte key.
+- `CMS_SESSION_COOKIE_SECRET`, a random value of at least 32 characters.
+
+Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` as a web redirect URI in the CMS Entra app. The GitHub deployment identity needs permission to create resource groups and to create the Blob reader role assignment in `rg-fullswing-content` (Owner, or Contributor plus User Access Administrator/Role Based Access Control Administrator as appropriate).
+
+On the first CMS workflow run, set `seed_initial_content` to `true` to copy the current repository blogs into an empty `content/blog/` prefix. It refuses to seed a non-empty prefix. Later CMS deployments leave Blob content untouched. Static-blog deployments then read Blob with the GitHub OIDC principal's container-scoped `Storage Blob Data Reader` role.
+
+The CMS host uses App Service Linux F1: free-tier quotas are limited, there is no custom domain or SLA, and instances can be restarted or cold. The Azure Blob 5 GB allowance is free for the first 12 months for eligible new accounts only; usage after that is billable. Keep content separate from the CMS and blog resource groups to preserve it across app teardown.
 
 ## Required Settings
 

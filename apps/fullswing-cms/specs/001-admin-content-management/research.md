@@ -33,6 +33,22 @@
 
 **Content consistency**: Azure Blob does not provide an atomic transaction across the Markdown/HTML body and JSON metadata blobs. Creates use conditional nonexistence checks; updates use each blob's ETag and attempt compensation if the second write fails. If compensation or a move cleanup fails, the provider returns an explicit partial-write error rather than claiming success.
 
+### Azure App Service and static publishing
+
+**Decision**: Host Fastify on Linux App Service F1 in a dedicated CMS resource group, keep the Blob storage account in a separate persistent content resource group, and leave the static-site resource group unchanged. A manual GitHub Actions workflow provisions/deploys the CMS with federated Azure login. The existing static-blog workflow uses its OIDC principal with container-scoped read access to list/download the Blob blog prefix before `azd deploy` runs the repository-based static build.
+
+**Rationale**: App Service can run the current Node/Fastify server without converting routes to Functions. Separating resource groups prevents the current blog `azd down` lifecycle from deleting CMS content. GitHub OIDC and data-plane RBAC avoid storing a storage key in the static-blog workflow.
+
+**Operational constraints**: F1 is a shared, quota-limited plan without custom domains or SLA; restarts lose in-memory sessions. Blob content is first seeded only when explicitly requested and only if the blog prefix is empty. The static sync downloads to a staging directory, validates complete Markdown/JSON pairs, then swaps the local blog directory so a failed or empty fetch cannot publish stale/partial output. The Blob free offer is limited to its published first-12-month eligibility; budgets must account for later charges.
+
+**Build/deploy implementation**: The manual CMS workflow runs tests and compiles `content-model`, `markdown-renderer`, and CMS before packaging their production runtime files. It disables App Service remote build and starts `apps/fullswing-cms/.build/src/index.js` directly from the package root. The static workflow uses Azure CLI list/download calls after OIDC login; the sync script strips `content/blog/`, stages each validated file, and atomically replaces `public/blog` only after every download succeeds.
+
+**Open deployment gate**: Live provisioning is not verified in this repository session. GitHub repository settings, the Entra redirect registration, and Azure federated/RBAC permissions must be configured before the manual workflow can run. The F1/Blob resources and first seed must then be exercised before enabling unattended deployments.
+
+**Build/deploy implementation**: The manual CMS workflow runs tests and compiles `content-model`, `markdown-renderer`, and CMS before packaging their production runtime files. It disables App Service remote build and starts `apps/fullswing-cms/.build/src/index.js` directly from the package root. The static workflow uses Azure CLI `download` calls after OIDC login rather than relying on an ambiguous local path mapping from `download-batch`; the sync script strips `content/blog/`, stages each validated file, and atomically replaces `public/blog` only after every download succeeds.
+
+**Open deployment gate**: Live provisioning is not verified in this repository session. The GitHub repository must define the listed vars/secrets, the Entra application must have the generated callback URL, and the federated principal must be able to create resource groups and the container-scoped role assignment. The F1/Blob resources and first seed must then be exercised with a manual workflow run before enabling unattended deployments.
+
 ### Metadata compatibility
 
 **Decision**: Add a pure JSON-string/object parsing and validation function to `@fullswing/content-model`; make the existing `loadMetadata(filePath)` read the file and delegate to it. CMS providers supply metadata content plus a stable source label to the pure function. Keep the required fields and `YYYY-MM-DD` validation in one shared place.

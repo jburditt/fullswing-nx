@@ -149,6 +149,7 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - The GitHub credential is invalid or revoked, the configured workflow cannot be dispatched, or GitHub throttles or rejects a request; the CMS reports dispatch failure and does not claim deployment completion.
 - Azure Blob Storage is unavailable, the configured encryption key is missing or invalid, or an encrypted secret cannot be authenticated; startup or the affected operation fails without exposing plaintext secret data.
 - The CMS process restarts while using the Azure Blob composition; persisted configuration and secrets remain available, while in-memory administrator sessions are lost and require a new sign-in.
+- The static-blog workflow cannot access the Blob container, receives an empty/incomplete blog prefix, or fails during download; the build is not allowed to publish a stale or partial content set.
 - An HTML page is selected while the active provider is read-only; the CMS leaves it read-only and shows the placeholder.
 
 ## Requirements *(mandatory)*
@@ -183,6 +184,10 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **FR-026**: The Azure Blob composition MUST keep administrator sessions in memory. A process restart MUST invalidate those sessions; durable session persistence is not required by this release.
 - **FR-027**: The Azure Blob composition MUST register Blob Storage as its content provider and MUST store blogs under `content/blog/<YYYY>/<basename>.md` plus `.json`, and pages under `content/pages/<YYYY>/<basename>.html` plus `.json`, where `<YYYY>` is derived from the metadata date. The configured content prefix MAY override `content`.
 - **FR-028**: The Azure Blob composition MUST NOT register or fall back to OneDrive and MUST NOT request Microsoft Graph file permissions for its content workflows. Administrator sign-in MUST use identity scopes only.
+- **FR-029**: The CMS deployment MUST provision its Linux App Service host in `rg-fullswing-cms` and persistent Blob content storage in `rg-fullswing-content`, separate from the static blog's `rg-fullswing-blog`. The CMS deployment workflow MUST NOT delete the content resource group.
+- **FR-030**: Before each static-blog build, the GitHub Actions workflow MUST authenticate to Azure using federated identity, read the `content/blog/` Blob prefix, and stage its year-based Markdown/JSON pairs under `apps/fullswing-blog/public/blog/`.
+- **FR-031**: The Blob-to-static sync MUST replace the staged blog directory only after every listed blob has downloaded and every body/metadata pair is complete. An empty prefix, malformed path, missing sidecar, or failed download MUST fail the deployment instead of publishing stale or partial content. Initial repository-to-Blob seeding MUST be explicit and MUST refuse to overwrite a non-empty prefix.
+- **FR-032**: The Azure CMS deployment package MUST compile the CMS and its workspace libraries before deployment and MUST start the compiled entry point using App Service environment settings without requiring a `.env` file.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -218,6 +223,9 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **SC-017**: In the Azure Blob composition, configuration and secrets remain readable after process recreation, while prior in-memory sessions are rejected and require sign-in again.
 - **SC-018**: Azure Blob content-provider tests round-trip blog and page pairs, reject malformed or orphaned pairs, and detect stale ETag versions without overwriting newer content.
 - **SC-019**: The Azure composition exposes Blob as its only content provider and uses identity-only Entra sign-in scopes; it makes no OneDrive or Microsoft Graph file-permission requests.
+- **SC-020**: Sync tests prove that Blob blog files land under `public/blog/<year>/`, stale local posts are removed after a successful sync, and failed/empty/incomplete downloads leave the previously staged content untouched or fail the build.
+- **SC-021**: The CMS host and persistent content store are deployed to separate resource groups; the existing static-blog teardown cannot delete CMS content.
+- **SC-022**: The CMS deployment workflow runs the CMS tests before deployment, and the static publishing workflow's Blob sync tests pass before content is staged for a build.
 
 ## Assumptions
 
@@ -230,7 +238,10 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - The CMS sends GitHub workflow dispatch requests; GitHub runs the workflow asynchronously, and observing workflow completion is outside this feature. The Azure Blob composition stores CMS content in Blob but does not synchronize that content into the static blog generator's repository; publishing Blob content requires a separate workflow integration.
 - Local-file configuration, sessions, and secrets are held in memory by the development composition and reset when the CMS process restarts; the content files themselves persist on disk.
 - The Azure Blob composition persists configuration and encrypted secrets in a private container. Its AES-256-GCM key is configured separately through the hosting environment; losing the key makes existing ciphertext unreadable, and rotation requires re-encrypting stored secrets. Sessions remain in memory and are intentionally invalidated by process restarts.
-- This feature supplies the Azure Blob composition but does not provision the Node.js host, storage account, HTTPS endpoint, or host environment settings.
+- The Azure deployment workflow provisions App Service Linux F1 and Blob Storage in separate CMS/content resource groups. F1 is a quota-limited hobby tier without a custom domain or SLA; operators accept cold starts and in-memory session loss.
+- GitHub Actions uses a federated deployment identity; its object ID is explicitly granted Blob Data Reader at the content container for static publishing. Deployment permissions must include resource-group provisioning and the scoped role assignment.
+- The first CMS deployment may seed an empty Blob blog prefix from the repository only through an explicit workflow input. Thereafter, Blob is authoritative and the static build syncs from Blob.
+- Blob's advertised 5 GB allowance is free only for the first 12 months for eligible new accounts; usage after that period may be billed.
 - Local-file blogs are compatible with the static blog generator's `public/blog/<year>/` discovery. HTML page source is stored under `public/pages/<year>/` but is not discovered or published by the current generator.
 - HTML page source may be edited through the local-file provider, but HTML preview, rendering, Svelte execution, and publication remain out of scope.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.

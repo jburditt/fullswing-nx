@@ -282,7 +282,8 @@ test('renderLayout should only load scripts needed by the page content', () => {
   const withCode = renderLayout({ ...base, content: '<pre><button data-copy-code></button></pre>' });
   const withFilters = renderLayout({ ...base, content: '<button data-category-toggle="a"></button>' });
 
-  assert.doesNotMatch(plain, /<script/);
+  assert.doesNotMatch(plain, /copy-code\.js|category-filters\.js|checkboxes\.js/);
+  assert.match(plain, /assets\/theme-toggle\.js/);
   assert.doesNotMatch(plain, /copy-status/);
   assert.match(withCode, /assets\/copy-code\.js/);
   assert.match(withCode, /id="copy-status"/);

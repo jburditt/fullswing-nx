@@ -13,11 +13,22 @@ test('createMermaidPrerenderer should wrap SVG, cache by source, and use unique 
   await prerenderer.render('graph TD; A-->B');
   await prerenderer.render('graph TD; B-->C');
 
-  assert.equal(calls.length, 4);
-  assert.equal(new Set(calls).size, 4);
-  assert.match(calls[0], /^mermaid-[0-9a-f]{12}-light:default$/);
-  assert.match(calls[1], /^mermaid-[0-9a-f]{12}-dark:dark$/);
-  assert.match(first, /^<figure class="mermaid-diagram" role="img" aria-label="A &quot;title&quot;"><div class="mermaid-diagram__light"><svg id="mermaid-[0-9a-f]{12}-light"><\/svg><\/div><div class="mermaid-diagram__dark"><svg id="mermaid-[0-9a-f]{12}-dark"><\/svg><\/div><\/figure>$/);
+  assert.equal(calls.length, 2);
+  assert.equal(new Set(calls).size, 2);
+  assert.match(calls[0], /^mermaid-[0-9a-f]{12}:default$/);
+  assert.match(first, /^<figure class="mermaid-diagram" role="img" aria-label="A &quot;title&quot;"><svg id="mermaid-[0-9a-f]{12}"><\/svg><\/figure>$/);
+});
+
+test('createMermaidPrerenderer should render with the requested theme', async () => {
+  const themes: string[] = [];
+  const prerenderer = createMermaidPrerenderer(async (_source, svgId, theme) => {
+    themes.push(theme);
+    return { svg: `<svg id="${svgId}"></svg>`, title: null, desc: null };
+  }, undefined, 'dark');
+
+  await prerenderer.render('graph TD; A-->B');
+
+  assert.deepEqual(themes, ['dark']);
 });
 
 test('createMermaidPrerenderer should fail with the offending source', async () => {

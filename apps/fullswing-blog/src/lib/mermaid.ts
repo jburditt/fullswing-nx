@@ -10,15 +10,20 @@ export type MermaidTheme = 'default' | 'dark';
 
 type MermaidSvgRenderer = (source: string, svgId: string, theme: MermaidTheme) => Promise<{ svg: string; title: string | null; desc: string | null }>;
 
-export function wrapDiagram(light: string, dark: string, label: string | null): string {
+export function wrapDiagram(svg: string, label: string | null): string {
   const labelAttribute = label ? ` aria-label="${escapeHtml(label)}"` : '';
-  return `<figure class="mermaid-diagram" role="img"${labelAttribute}>`
-    + `<div class="mermaid-diagram__light">${light}</div>`
-    + `<div class="mermaid-diagram__dark">${dark}</div></figure>`;
+  return `<figure class="mermaid-diagram" role="img"${labelAttribute}>${svg}</figure>`;
 }
 
-/** Caches by source hash and gives every diagram a unique SVG id so inlined styles do not collide. */
-export function createMermaidPrerenderer(renderSvg: MermaidSvgRenderer, onClose: () => Promise<void> = async () => {}): MermaidPrerenderer {
+/**
+ * Renders each diagram once, in the given theme. Caches by source hash and gives every diagram a
+ * unique SVG id so inlined styles do not collide. When site dark mode ships, pass the active theme.
+ */
+export function createMermaidPrerenderer(
+  renderSvg: MermaidSvgRenderer,
+  onClose: () => Promise<void> = async () => {},
+  theme: MermaidTheme = 'default',
+): MermaidPrerenderer {
   const cache = new Map<string, Promise<string>>();
 
   return {
@@ -26,11 +31,8 @@ export function createMermaidPrerenderer(renderSvg: MermaidSvgRenderer, onClose:
       const hash = createHash('sha256').update(source).digest('hex').slice(0, 12);
       let result = cache.get(hash);
       if (!result) {
-        result = Promise.all([
-          renderSvg(source, `mermaid-${hash}-light`, 'default'),
-          renderSvg(source, `mermaid-${hash}-dark`, 'dark'),
-        ])
-          .then(([light, dark]) => wrapDiagram(light.svg, dark.svg, light.title))
+        result = renderSvg(source, `mermaid-${hash}`, theme)
+          .then(({ svg, title }) => wrapDiagram(svg, title))
           .catch(error => {
             throw new Error(`Unable to prerender Mermaid diagram: ${error instanceof Error ? error.message : String(error)}\n${source}`);
           });
@@ -42,7 +44,7 @@ export function createMermaidPrerenderer(renderSvg: MermaidSvgRenderer, onClose:
   };
 }
 
-export async function launchMermaidPrerenderer(): Promise<MermaidPrerenderer> {
+export async function launchMermaidPrerenderer(theme: MermaidTheme = 'default'): Promise<MermaidPrerenderer> {
   const [{ renderMermaid }, puppeteer] = await Promise.all([
     import('@mermaid-js/mermaid-cli'),
     import('puppeteer'),
@@ -60,5 +62,5 @@ export async function launchMermaidPrerenderer(): Promise<MermaidPrerenderer> {
       mermaidConfig: { securityLevel: 'strict', theme, htmlLabels: false, flowchart: { htmlLabels: false } },
     });
     return { svg: decoder.decode(data), title, desc };
-  }, () => browser.close());
+  }, () => browser.close(), theme);
 }

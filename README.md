@@ -155,10 +155,8 @@ The sidecar JSON must use route `/page/<basename>`.
 
 ## To-Do
 
-- Add AI category and tag relevant blogs
 - Deploy CMS to Azure App Service and Blob Storage using Bicep
 - Add image e.g. screenshot
-- Remove category "Bicep" and replace with Azure
 - Trigger Github action run by API
 - OAuth for CMS
 - Cleanup CMS UI and update spec docs

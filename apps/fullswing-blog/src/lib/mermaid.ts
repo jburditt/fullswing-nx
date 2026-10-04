@@ -7,6 +7,19 @@ export interface MermaidPrerenderer {
 }
 
 export type MermaidTheme = 'default' | 'dark';
+// Colors come from CSS custom properties defined in site.css so one SVG follows the site theme.
+const THEME_CSS = [
+  '.node rect,.node circle,.node ellipse,.node polygon,.node path{fill:var(--mm-node-bg,#ECECFF);stroke:var(--mm-node-border,#9370DB);}',
+  '.cluster rect{fill:var(--mm-cluster-bg,#ffffde);stroke:var(--mm-cluster-border,#aaaa33);}',
+  '.node-bkg{stroke:var(--mm-cluster-border,#aaaa33);}',
+  '.marker,.arrowheadPath,.arrow{fill:var(--mm-line,#333333);}',
+  '.marker{stroke:var(--mm-line,#333333);}',
+  '.flowchart-link,.edgePaths .path,.edge{stroke:var(--mm-line,#333333);}',
+  '.label text,.cluster text,.cluster-label text,.flowchartTitleText,text{fill:var(--mm-text,#333333);}',
+  '.label,span,.cluster span,.cluster-label span{color:var(--mm-text,#333333);}',
+  '.edgeLabel,.edgeLabel p,.labelBkg{background-color:var(--mm-label-bg,rgba(232,232,232,0.8));}',
+  '.edgeLabel rect{fill:var(--mm-label-bg,rgba(232,232,232,0.8));}',
+].join('');
 
 type MermaidSvgRenderer = (source: string, svgId: string, theme: MermaidTheme) => Promise<{ svg: string; title: string | null; desc: string | null }>;
 
@@ -17,7 +30,7 @@ export function wrapDiagram(svg: string, label: string | null): string {
 
 /**
  * Renders each diagram once, in the given theme. Caches by source hash and gives every diagram a
- * unique SVG id so inlined styles do not collide. When site dark mode ships, pass the active theme.
+ * unique SVG id so inlined styles do not collide. Light/dark colors are applied by site CSS variables (see THEME_CSS).
  */
 export function createMermaidPrerenderer(
   renderSvg: MermaidSvgRenderer,
@@ -59,7 +72,7 @@ export async function launchMermaidPrerenderer(theme: MermaidTheme = 'default'):
     const { data, title, desc } = await renderMermaid(browser, source, 'svg', {
       svgId,
       backgroundColor: 'transparent',
-      mermaidConfig: { securityLevel: 'strict', theme, htmlLabels: false, flowchart: { htmlLabels: false } },
+      mermaidConfig: { securityLevel: 'strict', theme, themeCSS: THEME_CSS, htmlLabels: false, flowchart: { htmlLabels: false } },
     });
     return { svg: decoder.decode(data), title, desc };
   }, () => browser.close(), theme);

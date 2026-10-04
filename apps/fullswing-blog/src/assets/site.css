@@ -189,8 +189,13 @@ body {
 }
 
 :root[data-theme="dark"] .mermaid-diagram {
-  background: #f4f8ff;
-  color: #172033;
+  --mm-node-bg: #1c2745;
+  --mm-node-border: #8fb0ff;
+  --mm-cluster-bg: #0b0d12;
+  --mm-cluster-border: #3a4154;
+  --mm-line: #b4bccd;
+  --mm-text: #eef1f7;
+  --mm-label-bg: rgba(21, 25, 34, 0.85);
 }
 
 .page-content a,
@@ -486,6 +491,7 @@ body {
 }
 
 .mermaid-diagram svg {
+  fill: var(--mm-text, #333333) !important;
   height: auto;
   max-width: 100%;
 }

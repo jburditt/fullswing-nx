@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { getCategoryDisplayName, slugify } from '@fullswing/content-model';
 import { escapeHtml, formatDate, getCategoryColors } from './html.js';
 import { getRelativeHref } from './routes.js';
+
+const logoSvg = readFileSync(new URL('../../../src/assets/logo.svg', import.meta.url), 'utf8')
+  .replace(/<svg ([^>]*?) width="\d+" height="\d+" role="img" aria-label="[^"]*"/, '<svg class="brand__logo" $1 role="img" aria-label="Fullswing"')
+  .trim();
 
 export interface LayoutOptions {
   route: string;
@@ -60,7 +65,7 @@ export function renderLayout(options: LayoutOptions): string {
     <div class="shell">
       <header class="site-header">
         <a class="brand" href="${escapeHtml(getRelativeHref(route, '/'))}">
-          <img src="${escapedAssetPrefix}assets/logo.jpg" alt="Fullswing" />
+          ${logoSvg}
         </a>
         <nav class="social-links" aria-label="Social links">
           <a href="https://github.com/jburditt" aria-label="GitHub" target="_blank" rel="noopener noreferrer">

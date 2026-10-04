@@ -579,3 +579,15 @@ body {
     gap: 0.25rem 0.55rem;
   }
 }
+
+.brand__logo {
+  --logo-text: #5878b8;
+  --logo-sub: #7a8fb5;
+  height: 51px;
+  width: auto;
+}
+
+:root[data-theme="dark"] .brand__logo {
+  --logo-text: #e2e8f0;
+  --logo-sub: #a9aeb8;
+}

@@ -316,7 +316,7 @@ test('renderLayout should resolve the header logo from the generated asset direc
     content: '<p>Body</p>',
   });
 
-  assert.match(html, /src=\"\.\.\/\.\.\/assets\/logo\.jpg\"/);
+  assert.match(html, /<svg class="brand__logo"[^>]*aria-label="Fullswing"/);
   assert.match(html, /href=\"\.\.\/\.\.\/favicon\.png\"/);
 });
 

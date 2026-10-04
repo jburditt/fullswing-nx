@@ -155,31 +155,14 @@ The sidecar JSON must use route `/page/<basename>`.
 
 ## To-Do
 
-- Determine if assets should be copied to dist but instead should be pre-rendered static html e.g. assets.js should not be needed and markdowns should be pre-rendered to html
-- Implement pages e.g. angular-blog.html and azure-static-app.html OR use the existing pageRenderers
-- Handle cases where blog filenames are the same in different year folders
-- Remove route from blog.json files
-- Add spec-kit
-- Add unit and Playwright tests with Axe
-- Add best practices instructions and documentation
-- Add TypeScript skills
 - Add AI category and tag relevant blogs
-- Deploy to Azure static web app, preferably using Terraform or similar
-- Add the ability to link/preview OneDrive files
-- Consider moving the markdown and html files to OneDrive, which would require syncing folders
+- Deploy CMS to Azure App Service and Blob Storage using Bicep
+- Add image e.g. screenshot
 - Remove category "Bicep" and replace with Azure
-- Make the cateogory pills collapsible, add a Filter icon right aligned on the same row as "Latest Content"
-- Dark theme, match system theme?
-- OneDrive CMS
-- Templating and theming
-- File and database support for content
 - Trigger Github action run by API
 - OAuth for CMS
-- Github action syncs OneDrive folder for content
-- Create npm package for rendering enhanced markdowns
+- Cleanup CMS UI and update spec docs
 - Update angular-blog readme and reference this repository
-- Add blog comments
-- Run AI performance check, verify everything is static html, minimize typescript, and cache/bundle
 - Add blocks with header e.g. https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli
 ```
 > \[!NOTE]
@@ -189,12 +172,37 @@ The sidecar JSON must use route `/page/<basename>`.
 > npm_config_ignore_scripts=false npm install -g @github/copilot
 > ```
 ```
+- Check if I should consolidate javascript files or leave separate depending on blog use
 
-## Roadmap
+# Future Roadmap
+
+- Implement pages e.g. angular-blog.html and azure-static-app.html OR use the existing pageRenderers
+- Add unit and Playwright tests with Axe
+- Add best practices instructions and documentation
+- Add TypeScript AI skills
+- Add the ability to link/preview OneDrive files with file extension icon
+- Consider moving the markdown and html files to OneDrive, which would require syncing folders
+- Make the cateogory pills collapsible, add a Filter icon right aligned on the same row as "Latest Content"
+- The current theme should match OS system setting
+- OneDrive CMS
+- Templating and theming
+- File and database support for content
+- Github action syncs OneDrive folder for content (currently syncs blob storage)
+- Create npm package for rendering enhanced markdowns, move towards framework, so other devs can build their own blog
+- Add blog comments (require auth?)
+- Run AI performance check, verify everything is static html, minimize typescript, and cache/bundle
+
+## Roadmap Architecture
 
 - fullswing-blog: render sitemap, and blog posts
 - fullswing-blog-file: load blogs from file
 - fullswing-blog-db: load blogs from database
+- fullswing-blog-onedrive: load blogs from onedrive
 - fullswing-cms: manage enhanced markdown, html, and typescript pages; trigger Github action run. OAuth, static
 - fullswing-cms-template
 - fullswing-blog-template
+
+# Image Creation
+
+- Copy an [Gemini API key](https://aistudio.google.com/api-keys)
+- 

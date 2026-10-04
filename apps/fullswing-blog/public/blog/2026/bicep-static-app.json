@@ -1,6 +1,6 @@
 {
   "title": "Deploy Azure Static Web App with Bicep + azd",
-  "categories": ["Azure", "Bicep", "GitHub"],
+  "categories": ["Azure", "GitHub"],
   "author": "Jebb Burditt",
   "date": "2026-09-25"
 }

@@ -19,11 +19,11 @@ export interface CategoryColor {
 const CATEGORY_COLOR_MAP: Record<string, CategoryColor> = {
   Angular: { background: '#fdecee', text: '#b3261e' },
   Azure: { background: '#e8f1fc', text: '#0f62b3' },
+  AI: { background: '#f2eafa', text: '#0f7a6a' },
   GitHub: { background: '#f1f2f4', text: '#24292f' },
   TypeScript: { background: '#e8edfb', text: '#2f4a9e' },
   JavaScript: { background: '#fff8e1', text: '#8a6d00' },
   CSharp: { background: '#f1ecfc', text: '#5b3ec8' },
-  Bicep: { background: '#e6f7f5', text: '#0f7a6a' },
   Document: { background: '#eef1f5', text: '#475569' },
   Philosophy: { background: '#f5eef0', text: '#8a4b57' },
 };

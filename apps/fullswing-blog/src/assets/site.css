@@ -252,6 +252,7 @@ body {
 }
 
 .page-content details.accordion-item > summary {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -260,6 +261,23 @@ body {
   color: var(--accent);
   cursor: pointer;
   list-style: none;
+}
+
+.page-content details.accordion-item > summary::before {
+  position: absolute;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  left: -0.75rem;
+  width: 2px;
+  background: var(--accent);
+  content: "";
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.page-content details.accordion-item > summary:hover::before,
+.page-content details.accordion-item > summary:focus-visible::before {
+  opacity: 1;
 }
 
 .page-content details.accordion-item > summary::-webkit-details-marker {

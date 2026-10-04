@@ -59,6 +59,7 @@ dist/
   assets/site.css
   assets/category-filters.js   (home/sitemap only)
   assets/copy-code.js          (pages with code blocks only)
+  assets/theme-toggle.js       (every page)
 ```
 
 ## Content authoring
@@ -109,7 +110,10 @@ The sidecar JSON must use route `/page/<basename>`.
 - Remote source code blocks using `source=https://raw.githubusercontent.com/...` fence directives; use version-specific URLs when reproducible output matters
 - Minimal client-side category filtering and copy-to-clipboard behavior
 - Header social navigation uses accessible GitHub and LinkedIn SVG icons with lighter resting fills and darker hover/focus states
-- Mermaid diagrams: ```mermaid fences are prerendered at build time to inline SVG (`<figure class="mermaid-diagram">`) in both light and dark themes; CSS shows the dark variant under `:root[data-theme="dark"]` using headless Chromium via `@mermaid-js/mermaid-cli`. The deployed site ships no Mermaid runtime or JavaScript for diagrams, and an invalid diagram fails the build.
+- Light/dark theme toggle (header, after the LinkedIn icon): defaults to light, saved in `localStorage`, applied before first paint via a small inline script, and styled with CSS variables under `:root[data-theme="dark"]`
+- Collapsible sections (accordions): write native `<details class="accordion-item">` with a `<summary>` in Markdown (add `open` to start expanded). They are styled with a right-aligned plus/minus indicator and a theme-accent vertical line on hover/focus; no JavaScript is needed
+- Mermaid diagrams: ```mermaid fences are prerendered at build time to a single inline SVG (`<figure class="mermaid-diagram">`) in the light Mermaid theme using headless Chromium via `@mermaid-js/mermaid-cli`; under the dark site theme the figure is shown on a light panel. `launchMermaidPrerenderer` accepts a theme for future per-build theming. The deployed site ships no Mermaid runtime or JavaScript for diagrams, and an invalid diagram fails the build.
+- Optional build optimization: set `BLOG_OPTIMIZE=1` to minify HTML plus the site's own CSS/JS and write `.br`/`.gz` copies; it is off locally and enabled in `.github/workflows/deploy-blog.yml`. For example, in PowerShell: `$env:BLOG_OPTIMIZE='1'; npm run build`. The preview server serves the pre-compressed files when present
 
 ## Limitations
 

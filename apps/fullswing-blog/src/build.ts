@@ -7,6 +7,7 @@ import { escapeHtml } from './lib/html.js';
 import { renderLayout } from './lib/layout.js';
 import { renderMarkdown } from './lib/markdown.js';
 import { launchMermaidPrerenderer } from './lib/mermaid.js';
+import { optimizeDist } from './lib/optimize.js';
 import { ContentRepository } from '@fullswing/content-model';
 import { renderHomePage, renderSitemapPage } from './lib/renderers.js';
 import { getAssetPrefix, getOutputPath } from './lib/routes.js';
@@ -121,6 +122,10 @@ async function build(): Promise<void> {
       content: renderSitemapPage(repository),
     })
   );
+
+  if (process.env.BLOG_OPTIMIZE === '1') {
+    await optimizeDist(distDirectory);
+  }
 }
 
 build().catch(error => {

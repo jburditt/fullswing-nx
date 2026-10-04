@@ -43,6 +43,26 @@ async function resolveFilePath(distDirectory: string, pathname: string): Promise
   return undefined;
 }
 
+const COMPRESSIBLE_EXTENSIONS = new Set(['.html', '.css', '.js', '.svg', '.txt', '.xml']);
+
+// Serves the .br/.gz file written by the build when the client accepts that encoding.
+async function pickPrecompressed(filePath: string, acceptEncoding: string | string[] | undefined): Promise<{ name: string; extension: string } | undefined> {
+  const accepted = String(acceptEncoding ?? '').split(',').map(part => part.trim().split(';')[0]);
+  for (const candidate of [{ name: 'br', extension: 'br' }, { name: 'gzip', extension: 'gz' }]) {
+    if (!accepted.includes(candidate.name)) {
+      continue;
+    }
+    try {
+      if ((await stat(`${filePath}.${candidate.extension}`)).isFile()) {
+        return candidate;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
 async function serve(): Promise<void> {
   const currentDirectory = dirname(fileURLToPath(import.meta.url));
   const projectRoot = resolve(currentDirectory, '..', '..');
@@ -89,8 +109,10 @@ async function serve(): Promise<void> {
           return;
         }
 
-        let body: Buffer | string = await readFile(filePath);
-        if (liveReloadEnabled && extname(filePath) === '.html') {
+        const extension = extname(filePath);
+        const encoding = liveReloadEnabled ? undefined : await pickPrecompressed(filePath, request.headers['accept-encoding']);
+        let body: Buffer | string = await readFile(encoding ? `${filePath}.${encoding.extension}` : filePath);
+        if (liveReloadEnabled && extension === '.html') {
           const reloadScript = '<script>const reloadEvents = new EventSource("/__live-reload"); reloadEvents.addEventListener("reload", () => window.location.reload());</script>';
           const html = body.toString('utf8');
           body = html.replace(/<\/body\s*>/i, `${reloadScript}</body>`);
@@ -100,8 +122,10 @@ async function serve(): Promise<void> {
         }
 
         response.writeHead(200, {
-          'Content-Type': MIME_TYPES[extname(filePath)] ?? 'application/octet-stream',
-          ...(liveReloadEnabled ? { 'Cache-Control': 'no-store' } : {}),
+          'Content-Type': MIME_TYPES[extension] ?? 'application/octet-stream',
+          'Cache-Control': liveReloadEnabled ? 'no-store' : extension === '.html' ? 'no-cache' : 'public, max-age=3600',
+          ...(encoding ? { 'Content-Encoding': encoding.name } : {}),
+          ...(COMPRESSIBLE_EXTENSIONS.has(extension) ? { Vary: 'Accept-Encoding' } : {}),
         });
         response.end(body);
       })

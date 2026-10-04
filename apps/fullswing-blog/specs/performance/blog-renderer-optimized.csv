@@ -1,0 +1,4 @@
+page,url,load_event_ms,dom_content_loaded_ms,transfer_size_bytes,status,notes
+Home,http://localhost:5173/,13,12,2590,loaded,Navigation Timing API after minify + brotli
+Demo Features,http://localhost:5173/blog/demo-features,17,15,7269,loaded,Navigation Timing API after minify + brotli
+Docker Cheatsheet,http://localhost:5173/blog/docker-cheatsheet,13,12,2135,loaded,Navigation Timing API after minify + brotli

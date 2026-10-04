@@ -11,6 +11,11 @@
       ]
     },
     "build": {
+      "inputs": [
+        "default",
+        "^default",
+        { "env": "BLOG_OPTIMIZE" }
+      ],
       "outputs": [
         "{projectRoot}/.build",
         "{projectRoot}/dist"
@@ -21,6 +26,11 @@
       ]
     },
     "build:once": {
+      "inputs": [
+        "default",
+        "^default",
+        { "env": "BLOG_OPTIMIZE" }
+      ],
       "outputs": [
         "{projectRoot}/.build",
         "{projectRoot}/dist"

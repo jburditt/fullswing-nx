@@ -1,0 +1,4 @@
+page,url,load_event_ms,dom_content_loaded_ms,transfer_size_bytes,status,notes
+Home,http://localhost:5173/,20,19,16437,loaded,Navigation Timing API after page load
+Demo Features,http://localhost:5173/blog/demo-features,25,22,109601,loaded,Navigation Timing API after page load
+Docker Cheatsheet,http://localhost:5173/blog/docker-cheatsheet,18,18,5935,loaded,Navigation Timing API after page load

@@ -29,3 +29,11 @@ git fetch origin develop:develop
 git merge develop
 git stash pop
 ```
+
+GIT line endings
+```bash
+# Windows checkout change LF to CRLF and on push change and CRLF to LF
+ git config --global core.autocrlf true
+# Run to update the files found with 'git status' that only have line ending changes
+git add --renormalize .
+```

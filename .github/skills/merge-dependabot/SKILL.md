@@ -3,10 +3,6 @@ name: merge-dependabot
 description: Bulk-merge and verify a batch of open Dependabot PRs into a single feature branch, instead of testing/merging them one at a time, then push once so GitHub can auto-close the now-redundant individual PRs.
 ---
 
-# Prompt User to commit changes
-
-If there are unsaved changes in the workspace, encourage user to commit or discard changes; especially package.json and package-lock.json. This is not mandatory but encouraged.
-
 # Merge Dependabot PRs in bulk
 
 Use this skill when the user wants to "test all the Dependabot PRs at once", "merge the dependabot branches", "batch-verify dependency updates", or similar — there are many open Dependabot PRs (often npm/nuget dependency bumps) and testing/merging each individually is impractical.
@@ -20,6 +16,10 @@ Merging each Dependabot PR one-by-one means running the full build/test suite do
 - A feature/working branch to merge into (create one if not already on one: `git checkout -b <feature-branch>`).
 - `git fetch origin` run recently so remote Dependabot branches are visible locally.
 - (Optional) [Dependabot CLI](https://github.com/dependabot/cli) installed, for dry-running a `dependabot.yml` config or validating that an update is no longer pending — it does not run your app's own build/test suite, only simulates PR metadata.
+
+## Prompt User to commit changes
+
+If there are unsaved changes in the workspace, encourage user to commit or discard changes; especially package.json and package-lock.json. This is not mandatory but encouraged.
 
 ## Steps
 
@@ -40,6 +40,7 @@ git merge --no-edit origin/dependabot/npm_and_yarn/<path>/<package>-<version>
 Do this in a loop, but **stop and inspect on the first conflict** rather than blindly resolving everything — most conflicts are safe to auto-resolve, but some need judgment (see below).
 
 **Auto-resolvable conflicts (safe):** if only `package-lock.json`/`*.lock` conflicts (not `package.json`/`*.csproj`), keep either side — it gets regenerated in step 3 anyway:
+
 ```powershell
 git checkout --ours <lockfile>
 git add <lockfile>
@@ -53,25 +54,29 @@ git commit --no-edit
 Dependabot opens one PR per package, but some ecosystems require a package family to stay aligned. For Angular, keep `@angular/core`, `common`, `compiler`, `compiler-cli`, `forms`, `platform-browser`, and `router` on the same exact patch because they declare exact peer versions. `@angular/cdk` and tooling packages such as `cli` and `build` may use different patch versions when their peer ranges permit it.
 
 If Dependabot only opened PRs for a subset (e.g. just `common`/`compiler`/`core`), manually bump the rest to match:
+
 ```powershell
 npm view <package> versions --json   # find the closest/matching version
 ```
+
 Not every companion package publishes the exact same patch version (e.g. `@angular/cdk` may lag behind `@angular/core` by a few patches) — use the closest available version in that case; it's still safe since `cdk` only needs a compatible peer range, not an exact match.
+
+(only if projects have snapshot tests) - If snapshot tests fail after merging Dependabot updates, review the changes carefully. Only update snapshots if the changes are expected and correct; do not make arbitrary style changes to the snapshots. Any changes in behaviour to the snapshots must be confirmed with the user before making changes to avoid updating a snapshot to match a failing test.
 
 ### 4. Regenerate lockfiles cleanly
 
 ```powershell
-npm install     # once, in apps/frontend (one lockfile for all front-end projects)
+npm install     # one lockfile for all front-end projects
 dotnet restore  # per affected .csproj, if nuget packages were merged
 ```
 
 ### 5. Build and test once, for everything
 
 ```powershell
-npm run build:web; npm run build:admin   # from apps/frontend
-npm test        # from apps/frontend: ng test for every project (web, admin, shared)
+npm run build   # build all frontend apps
+npm test        # ng test for every project
 dotnet build <solution>.slnx   # backend, if nuget packages were merged
-cd e2e; npm run test:admin; npm run test:web   # full regression pass, if time allows
+cd e2e; npm run test   # run tests on all frontend projects. Full regression pass, if time allows
 ```
 
 Investigate any build/test failure by checking whether it also fails on the pre-merge base commit (`git show <base-commit>:<file>` or a quick `git stash`/base checkout) before assuming it's a regression from the merged updates — this repo has a few pre-existing stale/scaffold tests and config quirks unrelated to dependency bumps.
@@ -81,6 +86,7 @@ Investigate any build/test failure by checking whether it also fails on the pre-
 ```powershell
 git push --set-upstream origin <feature-branch>   # first push on a new branch
 ```
+
 Once this branch is merged to the base branch, the individual Dependabot PRs for packages now satisfied should auto-close on Dependabot's next scan. Any that don't auto-close (e.g. because they targeted a stricter/different constraint) can be closed manually or with `@dependabot close`.
 
 ## Notes

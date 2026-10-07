@@ -34,6 +34,23 @@ The code in the markdown file:
   <p>Content shown when expanded.</p>
 </details>
 ```
+## Github Style Alerts
+
+> \[!NOTE]
+> If you have `ignore-scripts=true` in your `~/.npmrc` file, you must use the command:
+>
+> ```shell copy
+> npm_config_ignore_scripts=false npm install -g @github/copilot
+> ```
+
+```markdown
+> \[!NOTE]
+> If you have `ignore-scripts=true` in your `~/.npmrc` file, you must use the command:
+>
+> ```shell copy
+> npm_config_ignore_scripts=false npm install -g @github/copilot
+> ```
+```
 
 ## Persistent Checkboxes
 - [ ] Todo item 1

@@ -44,6 +44,41 @@ test('createCmsApp mounts authenticated CMS routes using the configured provider
   assert.equal(editor.statusCode, 200);
 });
 
+test('createCmsApp redirects the dashboard to first-run configuration when no provider is saved', async () => {
+  const sessions = new FakeSessionStore();
+  await sessions.set({
+    id: 'first-run-session', identity: testAdministrator, tokenCacheReference: '', csrfToken: 'first-run-csrf',
+    createdAt: Date.now(), expiresAt: Date.now() + 60_000,
+  });
+  const contentProviders = new ContentProviderRegistry();
+  contentProviders.register('blob', (_settings, revision) => new FakeContentStorageProvider('blob', revision));
+  const app = await createCmsApp({
+    configurationStore: new FakeConfigurationStore(),
+    secretStore: new FakeSecretStore(),
+    identityProvider: new FakeIdentityProvider(),
+    sessionStore: sessions,
+    allowlist: new FakeAdminAllowlist(),
+    contentProviders,
+    registerOneDrive: false,
+    sessionCookieSecret: 'test-cookie-secret-that-is-at-least-32-characters',
+    secureCookies: false,
+  });
+  const cookie = `fullswing_cms_session=${encodeURIComponent(app.signCookie('first-run-session'))}`;
+
+  const dashboard = await app.inject({ method: 'GET', url: '/dashboard', headers: { cookie } });
+  const configuration = await app.inject({
+    method: 'GET',
+    url: dashboard.headers.location,
+    headers: { cookie },
+  });
+  await app.close();
+
+  assert.equal(dashboard.statusCode, 303);
+  assert.equal(dashboard.headers.location, '/configuration?setup=required');
+  assert.equal(configuration.statusCode, 200);
+  assert.match(configuration.body, /Choose and save a content provider to initialize storage/);
+});
+
 test('createCmsApp can leave provider registration to a Blob-only deployment composition', async () => {
   const contentProviders = new ContentProviderRegistry();
   contentProviders.register('blob', (_settings, revision) => new FakeContentStorageProvider('blob', revision));

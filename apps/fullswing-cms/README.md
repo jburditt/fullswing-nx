@@ -58,6 +58,8 @@ Register `https://<CMS_APP_NAME>.azurewebsites.net/auth/callback` as a Web redir
 
 On the first workflow run, set `seed_initial_content` to `true` to copy the repository's current blog pairs into an empty `content/blog/` Blob prefix. It refuses to overwrite a non-empty prefix. After that, CMS edits in Blob become authoritative. The Static Web App workflow reads that prefix with its federated identity and stages the files into `apps/fullswing-blog/public/blog/` before building.
 
+After the first CMS deployment, sign in and save the content-provider and GitHub workflow settings on `/configuration` before using the dashboard. Until a provider configuration has been saved, visiting `/dashboard` redirects to that setup form.
+
 The CMS host uses `rg-fullswing-cms`; persistent Blob content uses `rg-fullswing-content`; the static site remains in `rg-fullswing-blog`. Neither deployment workflow deletes `rg-fullswing-content`. The host uses App Service Linux F1, which has strict CPU and bandwidth quotas, no custom domain or SLA, and may cold-start or restart. The Blob free allowance is only for the first 12 months for eligible new Azure accounts; storage and transaction charges may apply afterward.
 
 ## Required Settings

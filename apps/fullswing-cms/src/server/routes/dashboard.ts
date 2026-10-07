@@ -6,6 +6,7 @@ import type { ProviderResolutionContext } from '../../content/storage/provider-r
 import { renderDashboardPage } from '../../views/dashboard.js';
 
 export interface DashboardRouteDependencies {
+  isConfigured(): Promise<boolean>;
   resolveContentProvider(context?: ProviderResolutionContext): Promise<ContentStorageProvider>;
 }
 
@@ -14,6 +15,10 @@ export function registerDashboardRoutes(
   dependencies: DashboardRouteDependencies,
 ): void {
   app.get('/dashboard', async (request, reply) => {
+    if (!await dependencies.isConfigured()) {
+      return reply.redirect('/configuration?setup=required', 303);
+    }
+
     const parsed = parseDashboardQuery(request.query as Record<string, unknown>);
     const provider = await dependencies.resolveContentProvider({
       tokenCacheReference: request.cmsSession?.tokenCacheReference ?? '',

@@ -157,7 +157,6 @@ The sidecar JSON must use route `/page/<basename>`.
 
 - Root route should redirect to dashboard
 - Redirect all pages to configuration if no provider found? Or wizard
-- Deploy CMS to Azure App Service and Blob Storage using Bicep
 - Add image e.g. screenshot
 - Trigger Github action run by API
 - OAuth for CMS

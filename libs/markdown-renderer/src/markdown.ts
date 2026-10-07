@@ -14,6 +14,9 @@ import { escapeHtml } from './html.js';
 const DEFAULT_ALLOWED_HOSTS = new Set(['raw.githubusercontent.com']);
 const DEFAULT_MAX_SOURCE_BYTES = 1_000_000;
 const DEFAULT_SOURCE_TIMEOUT_MS = 10_000;
+const MARKDOWN_ALERT_TYPES = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'] as const;
+
+type MarkdownAlertType = (typeof MARKDOWN_ALERT_TYPES)[number];
 
 export interface MarkdownRenderOptions {
   fetchImpl?: typeof fetch;
@@ -295,6 +298,11 @@ function renderCodeBlock(code: string, rawInfo: string | undefined): string {
   ].join('');
 }
 
+function getMarkdownAlertType(text: string): MarkdownAlertType | undefined {
+  const alertType = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?=\s|$)/i.exec(text)?.[1].toUpperCase();
+  return MARKDOWN_ALERT_TYPES.find(type => type === alertType);
+}
+
 export async function renderMarkdown(source: string, options: MarkdownRenderOptions = {}): Promise<string> {
   const sourceCache = options.sourceCache ?? new Map<string, Promise<string>>();
   const marked = new Marked({
@@ -327,6 +335,22 @@ export async function renderMarkdown(source: string, options: MarkdownRenderOpti
           return diagram;
         }
         return renderCodeBlock(token.text, token.lang);
+      },
+      blockquote({ tokens }: Tokens.Blockquote): string {
+        const firstToken = tokens[0];
+        const alertType = firstToken?.type === 'paragraph' ? getMarkdownAlertType(firstToken.text) : undefined;
+        const content = this.parser.parse(tokens);
+
+        if (!alertType) {
+          return `<blockquote>\n${content}</blockquote>\n`;
+        }
+
+        const title = `${alertType[0]}${alertType.slice(1).toLowerCase()}`;
+        const alertBody = content
+          .replace(new RegExp(`^<p>\\[!${alertType}\\](?:\\s|<br\\s*\\/?>)*`, 'i'), '<p>')
+          .replace(/^<p><\/p>\n?/, '');
+
+        return `<blockquote class="markdown-alert markdown-alert-${alertType.toLowerCase()}">\n<p class="markdown-alert__title">${title}</p>\n${alertBody}</blockquote>\n`;
       },
     },
   });

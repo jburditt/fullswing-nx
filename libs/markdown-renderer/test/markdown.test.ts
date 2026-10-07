@@ -25,6 +25,53 @@ test('renderMarkdown renders interactive task list checkboxes', async () => {
   assert.doesNotMatch(html, /disabled/);
 });
 
+test('renderMarkdown renders GitHub-style alert blockquotes', async () => {
+  const source = [
+    '> [!NOTE]',
+    '> Note body.',
+    '>',
+    '> ```shell copy',
+    '> npm install -g @github/copilot',
+    '> ```',
+    '',
+    '> [!TIP] Tip body.',
+    '',
+    '> [!IMPORTANT]',
+    '> Important body.',
+    '',
+    '> [!WARNING]',
+    '> Warning body.',
+    '',
+    '> [!CAUTION]',
+    '> Caution body.',
+    '',
+    '> Ordinary quote.',
+    '',
+    '> [!UNKNOWN]',
+    '> Unknown alert.',
+  ].join('\n');
+  const html = await renderMarkdown(source);
+
+  for (const [type, title] of [
+    ['note', 'Note'],
+    ['tip', 'Tip'],
+    ['important', 'Important'],
+    ['warning', 'Warning'],
+    ['caution', 'Caution'],
+  ]) {
+    assert.match(html, new RegExp(`<blockquote class="markdown-alert markdown-alert-${type}">`));
+    assert.match(html, new RegExp(`<p class="markdown-alert__title">${title}<\\/p>`));
+  }
+
+  assert.match(html, /<p>Note body\.<\/p>/);
+  assert.match(html, /class="code-block(?:\s|")/);
+  assert.match(html, /data-language="shell"/);
+  assert.match(html, /@github\/copilot/);
+  assert.doesNotMatch(html, /\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/);
+  assert.match(html, /<blockquote>\n<p>Ordinary quote\.<\/p>\n<\/blockquote>/);
+  assert.match(html, /<blockquote>\n<p>\[!UNKNOWN\]\nUnknown alert\.<\/p>/);
+});
+
 test('renderMarkdown escapes unknown-language code and Mermaid source', async () => {
   const code = await renderMarkdown('```unknown\n<script>alert(1)</script>\n```');
   const diagram = await renderMarkdown('```mermaid\ngraph TD;\n<script>alert(1)</script>\n```');

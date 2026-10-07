@@ -6,10 +6,14 @@ import { renderConfigurationPage } from '../../views/configuration.js';
 
 export function registerConfigurationRoutes(app: FastifyInstance, service: ConfigurationService): void {
   app.get('/configuration', async (request, reply) => {
+    const setupRequired = new URL(request.url, 'http://localhost').searchParams.get('setup') === 'required';
     return reply.type('text/html; charset=utf-8').send(renderConfigurationPage({
       configuration: await service.readPublic(),
       availableProviderTypes: service.availableProviderTypes(),
       csrfToken: request.cmsSession?.csrfToken ?? '',
+      statusMessage: setupRequired
+        ? 'Choose and save a content provider to initialize storage before using the dashboard.'
+        : undefined,
     }));
   });
 

@@ -105,7 +105,10 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
     sessions,
     secureCookies: dependencies.secureCookies,
   });
-  registerDashboardRoutes(app, { resolveContentProvider });
+  registerDashboardRoutes(app, {
+    isConfigured: async () => (await dependencies.configurationStore.read()) !== undefined,
+    resolveContentProvider,
+  });
   registerBlogEditorRoutes(app, {
     resolveContentProvider,
     getConfigRevision: async () => {

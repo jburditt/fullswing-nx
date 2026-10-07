@@ -35,7 +35,10 @@ async function createDashboardApp(): Promise<{
   provider.seed(blogEntry('nx-migration', 'Nx migration', 'Bob Example', '2026-02-12', ['Architecture']));
   const app = createApp({ sessionCookieSecret: 'test-cookie-secret-that-is-at-least-32-characters', secureCookies: false });
   registerRequestGuards(app, { sessions, allowlist: new FakeAdminAllowlist() });
-  registerDashboardRoutes(app, { resolveContentProvider: async () => provider });
+  registerDashboardRoutes(app, {
+    isConfigured: async () => true,
+    resolveContentProvider: async () => provider,
+  });
   await app.ready();
   return { app, cookie: `fullswing_cms_session=${encodeURIComponent(app.signCookie('dashboard-session'))}` };
 }
@@ -43,7 +46,10 @@ async function createDashboardApp(): Promise<{
 test('dashboard redirects anonymous visitors without exposing entries', async () => {
   const app = createApp({ sessionCookieSecret: 'test-cookie-secret-that-is-at-least-32-characters', secureCookies: false });
   registerRequestGuards(app, { sessions: new FakeSessionStore(), allowlist: new FakeAdminAllowlist() });
-  registerDashboardRoutes(app, { resolveContentProvider: async () => new FakeContentStorageProvider() });
+  registerDashboardRoutes(app, {
+    isConfigured: async () => true,
+    resolveContentProvider: async () => new FakeContentStorageProvider(),
+  });
   await app.ready();
 
   const response = await app.inject({ method: 'GET', url: '/dashboard' });

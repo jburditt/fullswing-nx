@@ -1,4 +1,4 @@
-name: Deploy Fullswing CMS to Azure App Service
+name: Deploy Fullswing CMS - Azure App Service
 
 on:
   workflow_dispatch:
@@ -70,10 +70,23 @@ jobs:
         run: |
           set -euo pipefail
           az group create --name "$CONTENT_RESOURCE_GROUP" --location "$AZURE_LOCATION" --output none
-          storage_account_name="$(az deployment group create \
+          deployment_name="content-storage-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          # Unique name avoids stale deployment lookups; retry covers transient DeploymentNotFound polling errors.
+          for attempt in 1 2 3; do
+            if az deployment group create \
+              --name "$deployment_name" \
+              --resource-group "$CONTENT_RESOURCE_GROUP" \
+              --template-file apps/fullswing-cms/infra/content-storage.bicep \
+              --parameters staticBuildPrincipalObjectId="$AZURE_CLIENT_OBJECT_ID" \
+              --output none; then
+              break
+            fi
+            if [[ "$attempt" == "3" ]]; then exit 1; fi
+            sleep 15
+          done
+          storage_account_name="$(az deployment group show \
+            --name "$deployment_name" \
             --resource-group "$CONTENT_RESOURCE_GROUP" \
-            --template-file apps/fullswing-cms/infra/content-storage.bicep \
-            --parameters staticBuildPrincipalObjectId="$AZURE_CLIENT_OBJECT_ID" \
             --query 'properties.outputs.storageAccountName.value' --output tsv)"
           connection_string="$(az storage account show-connection-string \
             --resource-group "$CONTENT_RESOURCE_GROUP" \

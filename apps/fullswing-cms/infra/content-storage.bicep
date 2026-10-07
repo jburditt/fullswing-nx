@@ -6,6 +6,9 @@ param location string = resourceGroup().location
 @description('GitHub Actions service principal object ID. It receives read-only access for static-site builds.')
 param staticBuildPrincipalObjectId string
 
+@description('Create the reader role assignment. Requires the deploying identity to hold Owner or User Access Administrator; leave false for Contributor-only identities.')
+param assignStaticBuildReader bool = false
+
 @description('Storage account name. Must be globally unique and use lowercase letters and numbers only.')
 param storageAccountName string = 'fscms${uniqueString(resourceGroup().id)}'
 
@@ -47,7 +50,7 @@ resource contentContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
   }
 }
 
-resource staticBuildReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource staticBuildReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignStaticBuildReader) {
   name: guid(contentContainer.id, staticBuildPrincipalObjectId, storageBlobDataReaderRoleId)
   scope: contentContainer
   properties: {

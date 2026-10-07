@@ -3,6 +3,15 @@ name: Deploy Fullswing Blog - Static Web App
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/fullswing-blog/**'
+      - 'libs/**'
+      - 'azure.yaml'
+      - 'infra/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-blog.yml'
   workflow_dispatch:
     inputs:
       action:

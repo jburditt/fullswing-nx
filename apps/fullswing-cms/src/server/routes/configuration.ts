@@ -61,6 +61,7 @@ function parseConfigurationDraft(request: FastifyRequest): ConfigurationDraft {
         driveId: textValue(body.driveId) ?? '',
         rootFolderId: textValue(body.rootFolderId) ?? '',
         publicDirectory: textValue(body.publicDirectory) ?? '',
+        contentPrefix: textValue(body.contentPrefix)?.trim() || 'content',
       },
     },
     githubWorkflow: {

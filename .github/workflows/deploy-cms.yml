@@ -1,6 +1,14 @@
 name: Deploy Fullswing CMS - Azure App Service
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/fullswing-cms/**'
+      - 'libs/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-cms.yml'
   workflow_dispatch:
     inputs:
       seed_initial_content:

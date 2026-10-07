@@ -15,7 +15,8 @@ export interface ConfigurationViewOptions {
 
 export function renderConfigurationPage(options: ConfigurationViewOptions): string {
   const configuration = options.configuration;
-  const providerType = configuration?.contentProvider.type ?? options.availableProviderTypes?.[0] ?? 'onedrive';
+  const available = options.availableProviderTypes ?? [];
+  const providerType = configuration?.contentProvider.type ?? (available.includes('blob') ? 'blob' : available[0]) ?? 'onedrive';
   const providerNames: Record<string, string> = { blob: 'Azure Blob Storage', demo: 'Local demo', file: 'Local files', onedrive: 'OneDrive' };
   const providerTypes = new Set([...(options.availableProviderTypes ?? []), providerType]);
   const providerOptions = [...providerTypes].map(type => `<option value="${escapeHtml(type)}"${providerType === type ? ' selected' : ''}>${escapeHtml(providerNames[type] ?? type)}</option>`).join('');
@@ -25,10 +26,12 @@ export function renderConfigurationPage(options: ConfigurationViewOptions): stri
       ? `<label class="cms-field">Drive ID<input name="driveId" value="${escapeHtml(String(providerSettings.driveId ?? ''))}" /></label><label class="cms-field">Root folder ID<input name="rootFolderId" value="${escapeHtml(String(providerSettings.rootFolderId ?? ''))}" /></label>`
       : type === 'file'
         ? `<label class="cms-field cms-field--wide">Website public directory<input name="publicDirectory" value="${escapeHtml(String(providerSettings.publicDirectory ?? ''))}" /></label>`
-        : '<p class="cms-credential-state">This provider has no additional settings.</p>';
+        : type === 'blob'
+          ? `<label class="cms-field cms-field--wide">Content prefix<input name="contentPrefix" value="${escapeHtml(String(providerSettings.contentPrefix ?? 'content'))}" /></label><p class="cms-credential-state">The storage account and container come from the host's CMS_BLOB_* settings.</p>`
+          : '<p class="cms-credential-state">This provider has no additional settings.</p>';
     return `<div class="cms-settings-grid" data-provider-settings="${escapeHtml(type)}"${type === providerType ? '' : ' hidden'}>${fields}</div>`;
   }).join('');
-  const workflow = configuration?.githubWorkflow;
+  const workflow = configuration?.githubWorkflow ?? { owner: 'jburditt', repository: 'fullswing-nx', workflow: 'deploy-blog.yml', ref: 'main', inputs: { action: 'up' }, credentialConfigured: false };
   const errors = options.issues?.length
     ? `<section class="cms-errors" role="alert"><h2>Configuration was not saved</h2><ul>${options.issues.map(issue => `<li><strong>${escapeHtml(issue.field)}:</strong> ${escapeHtml(issue.message)}</li>`).join('')}</ul></section>`
     : '';

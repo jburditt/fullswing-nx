@@ -130,6 +130,12 @@ async function serve(): Promise<void> {
         response.end(body);
       })
       .catch(error => {
+        if (error instanceof URIError) {
+          response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+          response.end('400 Bad Request');
+          return;
+        }
+
         response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
         response.end('500 Internal Server Error');
         console.error((error as Error).message);

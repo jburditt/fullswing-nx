@@ -15,6 +15,7 @@
     "/^git diff( .*)?$/": true,
     "git diff --stat": true,
     "/^git status( .*)?$/": true,
-    "git status --short": true
+    "git status --short": true,
+    "npm exec nx show projects -- --json": true
   }
 }

@@ -155,6 +155,7 @@ The sidecar JSON must use route `/page/<basename>`.
 
 ## To-Do
 
+- Use the Markdown editor from Github Copilot app
 - Root route should redirect to dashboard
 - Redirect all pages to configuration if no provider found? Or wizard
 - Add image e.g. screenshot

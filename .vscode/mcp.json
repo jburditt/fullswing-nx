@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "mcp-image": {
+      "command": "npx",
+      "args": ["-y", "mcp-image"],
+      "env": {
+        "GEMINI_API_KEY": "${input:gemini-api-key}",
+        "IMAGE_OUTPUT_DIR": "/specs/imgs"
+      }
+    }
+  }
+}

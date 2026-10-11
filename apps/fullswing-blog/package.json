@@ -24,9 +24,7 @@
   },
   "dependencies": {
     "@fullswing/content-model": "*",
-    "@fullswing/markdown-renderer": "^1.0.0",
-    "marked": "16.4.0",
-    "prismjs": "1.30.0"
+    "@fullswing/markdown-renderer": "^1.0.0"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.17.0",

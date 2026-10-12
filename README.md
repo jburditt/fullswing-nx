@@ -155,6 +155,7 @@ The sidecar JSON must use route `/page/<basename>`.
 
 ## To-Do
 
+- Add MCP server that can read public and private jburditt repo
 - Use the Markdown editor from Github Copilot app
 - Root route should redirect to dashboard
 - Redirect all pages to configuration if no provider found? Or wizard
@@ -173,6 +174,9 @@ The sidecar JSON must use route `/page/<basename>`.
 > ```
 ```
 - Check if I should consolidate javascript files or leave separate depending on blog use
+- check fullswing-blog and fullswing-cms for code redundancy and candidates for moving to shared lib folder
+- storage account should be named 'fullswing-cms-storage-account'
+- consolidate blog and cms .env settings
 
 # Future Roadmap
 

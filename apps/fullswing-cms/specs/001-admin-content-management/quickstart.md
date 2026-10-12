@@ -13,7 +13,7 @@ npm exec nx run fullswing-cms:test
 node --test scripts/sync-blog-content.test.mjs
 ```
 
-Expected result: TypeScript compilation succeeds and the native Node test runner reports passing CMS, provider-contract, authentication, mocked-Graph, Blob content/runtime persistence, configuration, GitHub dispatch, local-file provider, and page-route tests.
+Expected result: TypeScript compilation succeeds and the native Node test runner reports passing CMS, provider-contract, authentication, mocked-Graph, Blob content/runtime persistence, configuration, GitHub dispatch, local-file provider, page-route, and MCP tests.
 
 ## Validation Scenarios
 
@@ -28,6 +28,7 @@ Expected result: TypeScript compilation succeeds and the native Node test runner
 9. **Preview and metadata safety**: `markdown-preview.test.ts`, `blog-editor.test.ts`, and the content-model metadata tests cover sanitizer behavior, valid metadata, invalid dates, duplicate routes, and rejection before writes.
 10. **Blob runtime persistence**: `blob-stores.test.ts` verifies configuration round-trips, stale-revision conflicts, encrypted secret round-trips, deletion, tamper rejection, and wrong-key rejection using an in-memory Blob fake.
 11. **Blob content provider**: `blob-content-provider.test.ts` verifies blog and page pair round-trips, year-prefixed routing, ETag conflict detection, and rejection of orphaned or malformed pairs. Bootstrap and Entra tests verify the Azure composition can exclude OneDrive and use identity-only scopes.
+12. **MCP authentication and tools**: `mcp.test.ts` verifies public protected-resource metadata, Entra scope/tenant/allowlist rejection, authenticated Streamable HTTP initialization, tool discovery, filtered blog search, retrieval, and mandatory bearer authentication on session requests.
 
 ## Optional Local File Smoke Test
 
@@ -42,13 +43,21 @@ The local composition defaults to `apps/fullswing-blog/public`; the Configuratio
 
 ## Optional Azure Blob Composition Smoke Test
 
-Build the CMS, then run it with `CMS_BOOTSTRAP_MODULE=./blob-composition.mjs`. Configure `CMS_BLOB_CONNECTION_STRING`, optional `CMS_BLOB_CONTAINER_NAME`, `CMS_SECRET_ENCRYPTION_KEY`, `CMS_ENTRA_TENANT_ID`, `CMS_ENTRA_CLIENT_ID`, `CMS_ENTRA_CLIENT_SECRET`, `CMS_ENTRA_REDIRECT_URI`, `CMS_ADMIN_OBJECT_IDS`, and `CMS_SESSION_COOKIE_SECRET` in the host environment. Generate a fresh encryption key with:
+Build the CMS, then run it with `CMS_BOOTSTRAP_MODULE=./blob-composition.mjs`. Configure `CMS_BLOB_CONNECTION_STRING`, optional `CMS_BLOB_CONTAINER_NAME`, `CMS_SECRET_ENCRYPTION_KEY`, `CMS_ENTRA_TENANT_ID`, `CMS_ENTRA_CLIENT_ID`, `CMS_ENTRA_CLIENT_SECRET`, `CMS_ENTRA_REDIRECT_URI`, `CMS_MCP_RESOURCE_URL`, `CMS_ADMIN_OBJECT_IDS`, and `CMS_SESSION_COOKIE_SECRET` in the host environment. `CMS_MCP_RESOURCE_URL` must be the HTTPS public `/mcp` URL; the Azure Bicep template supplies it for App Service. Generate a fresh encryption key with:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
 Keep the key outside the Blob container and back it up securely. Verify the container is private, sign in as an allowlisted administrator, select Azure Blob Storage, and configure the GitHub workflow. Create and edit a blog and an HTML page; confirm the pairs appear under `content/blog/<year>/` and `content/pages/<year>/`, then force a stale edit and confirm it is rejected. Restart the CMS: content, configuration, and credentials remain stored, while the administrator must sign in again because sessions are in memory. Confirm OneDrive is not offered or called. This local smoke test covers CMS persistence; use the First Azure Deployment steps below to verify Blob content is synced into the static build. The composition itself does not provision the App Service or storage account.
+
+## MCP Endpoint Verification
+
+The CMS test target includes `test/integration/mcp.test.ts`. It starts the CMS on a dynamic loopback HTTP port and exercises MCP initialize, tool listing, `search_blogs`, and `get_blog` using an in-memory content provider and fake Entra token verifier. It also verifies that the advertised tools are read-only and that attempted `create_blog`, `save_blog`, and `update_blog` calls are rejected. Run it with the regular test command above; this validates the protocol locally without tenant credentials or Azure access, but does not validate live Entra OAuth or Blob connectivity.
+
+The Azure Blob composition exposes `POST /mcp` and `GET /.well-known/oauth-protected-resource/mcp`. Configure the CMS Entra application with Application ID URI `api://<CMS_ENTRA_CLIENT_ID>`, access token version 2, and delegated scope `mcp.read`; configure the MCP client application in the same tenant to request `api://<CMS_ENTRA_CLIENT_ID>/mcp.read`. The CMS README's [Blog MCP endpoint](../../README.md#blog-mcp-endpoint) section covers the complete registration and hosted endpoint setup. Only allowlisted administrators with a valid bearer token can use it; a CMS browser login cookie is not sufficient. The available tools search all valid Blob blog pairs, including unpublished blogs, and retrieve a blog by its search result ID. They do not expose pages, CMS settings, secrets, or writes. There is no MCP operation or capability to create a blog, save content, or update an existing blog. Creating and editing through `/blogs/new` and `/blogs/:id/edit` are separate browser CMS features and are not available to MCP clients.
+
+The current `.vscode/mcp.json` entry points to `https://localhost:3000/mcp`. The file composition does not mount `/mcp`; local live testing requires the Blob composition and a trusted HTTPS certificate. When `CMS_MCP_ALLOW_ANONYMOUS=true` is set in `.env`, the endpoint accepts unauthenticated local MCP connections directly without prompting for Entra client IDs or OAuth authentication. If anonymous access is disabled, local live testing also requires Entra app registrations and an OAuth client ID. See the CMS README's [local HTTPS testing steps](../../README.md#run-the-mcp-locally-over-https). With the certificate paths configured, `npm --workspace=fullswing-cms run start` serves HTTPS directly on the configured local port. The automated integration test still uses an in-memory source and fake token verifier, so it does not substitute for the live Blob smoke test.
 
 ## Azure Deployment
 

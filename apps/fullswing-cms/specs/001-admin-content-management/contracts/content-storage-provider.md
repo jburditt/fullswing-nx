@@ -58,6 +58,14 @@ Exact TypeScript signatures belong in the implementation. Provider APIs and erro
 - Keep content under its prefix separate from runtime configuration and encrypted secrets in the same private container.
 - The Azure composition signs administrators in using OIDC identity scopes and does not request Microsoft Graph file permissions.
 
+## MCP Blog Read Capability
+
+- The Azure composition may provide an additional blog-only read capability (`listBlogs()` and `readBlog(id)`) to the MCP route. It is composition wiring, not a requirement that every provider implement an MCP interface.
+- `listBlogs()` returns the complete set of valid blog pairs, including unpublished entries; it never lists HTML pages, configuration, or secrets. Incomplete or malformed blog pairs fail explicitly rather than being silently omitted.
+- `readBlog(id)` accepts only an opaque ID resolved by the active content provider and returns the matching blog or an explicit not-found result.
+- MCP tools receive only this read capability. They do not receive provider save operations or access to configuration and secret stores. This limits the exposed tool surface but does not provide storage-level least privilege: the Azure MCP route shares the CMS process and its Blob credentials.
+- See the feature requirements for Entra authorization, request/session bounds, and the `search_blogs` / `get_blog` response contract.
+
 ## Conformance Tests
 
 Run contract tests against an in-memory fake and provider-focused tests against each adapter. Cover configuration rejection, empty and paginated collections, valid/malformed/orphaned pairs, create/update round-trips, stale versions, invalid metadata with no writes, provider outage, first/second member write failure, compensation, and source-switch non-migration. Blob tests additionally cover year-based names, ETag preconditions, Blob-only registration, and blog/page round-trips. Local-file tests cover year-based paths, duplicate blog basenames, page source round-trips, and escaped form handling. A fake provider proves CMS workflow independence; it does not count as a shipped alternate production provider.

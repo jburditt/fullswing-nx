@@ -35,6 +35,7 @@ To use the Azure Blob composition, set `CMS_BOOTSTRAP_MODULE=./blob-composition.
 - `CMS_BLOB_CONNECTION_STRING` and optionally `CMS_BLOB_CONTAINER_NAME` (defaults to `fullswing-cms-state`). The composition creates the container as private if it does not exist.
 - `CMS_SECRET_ENCRYPTION_KEY`: base64-encoded 32-byte key. Generate one with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`; keep a protected backup because losing or rotating this key without re-encrypting the blobs makes saved secrets unreadable.
 - `CMS_ENTRA_TENANT_ID`, `CMS_ENTRA_CLIENT_ID`, `CMS_ENTRA_CLIENT_SECRET`, and `CMS_ENTRA_REDIRECT_URI`.
+- `CMS_MCP_RESOURCE_URL`, set by the Azure Bicep deployment to the public `/mcp` URL.
 - `CMS_ADMIN_OBJECT_IDS`: comma-separated immutable Entra object IDs in the configured tenant.
 - `CMS_SESSION_COOKIE_SECRET`: random secret of at least 32 characters.
 
@@ -62,6 +63,21 @@ After the first CMS deployment, sign in and save the content-provider and GitHub
 
 The CMS host uses `rg-fullswing-cms`; persistent Blob content uses `rg-fullswing-content`; the static site remains in `rg-fullswing-blog`. Neither deployment workflow deletes `rg-fullswing-content`. The host uses App Service Linux F1, which has strict CPU and bandwidth quotas, no custom domain or SLA, and may cold-start or restart. The Blob free allowance is only for the first 12 months for eligible new Azure accounts; storage and transaction charges may apply afterward.
 
+## Blog MCP endpoint
+
+The Azure CMS composition exposes a read-only Streamable HTTP MCP endpoint at `https://<CMS_APP_NAME>.azurewebsites.net/mcp`. MCP clients must authenticate with a Microsoft Entra OAuth access token for the CMS API and the signed-in user must be listed in `CMS_ADMIN_OBJECT_IDS`. The CMS session cookie is not accepted for MCP requests. Protected-resource discovery is available at `/.well-known/oauth-protected-resource/mcp`.
+
+In the CMS Entra app registration, set the Application ID URI to `api://<CMS_ENTRA_CLIENT_ID>`, set the access token version to 2, and expose a delegated scope named `mcp.read`. Register each MCP client application in the same tenant and grant it that delegated permission. Configure the client to request `api://<CMS_ENTRA_CLIENT_ID>/mcp.read`; Entra issues tokens for the tenant's v2.0 authority. Dynamic client registration is not provided by Entra, so the client app registration and consent must be configured in advance.
+
+MCP connections are held in memory, expire after 30 minutes of inactivity, and are lost on an App Service restart; clients must initialize a new session after reconnecting. The host allows at most 100 concurrent MCP sessions.
+
+The server provides two tools:
+
+- `search_blogs`: keyword search over Markdown and metadata, with title, category, author, date-range filters, and a bounded result count.
+- `get_blog`: retrieve the Markdown and metadata for a blog using the ID returned by search.
+
+Only blogs are exposed; pages, CMS settings, secrets, and write operations are not. Every valid pair under `content/blog/<year>/` is in scope, including entries not yet published to the static site. Treat Blob content as available to every allowlisted administrator. The MCP tool surface is read-only, but it shares the CMS process and its Blob connection string; Azure Storage does not enforce a separate read-only identity for MCP. Requests have bounded input and output sizes; no standalone rate-limiting layer is configured.
+
 ## Required Settings
 
 - Entra: tenant ID, application/client ID, client secret, redirect URI, and an allowlist keyed by immutable tenant and object IDs. The Azure Blob composition requests `openid`, `profile`, and `email` only. A composition that enables OneDrive additionally requests delegated Microsoft Graph `Files.ReadWrite` access.
@@ -81,8 +97,46 @@ The Configuration page displays saved non-secret values and only whether the Git
 - `/pages` and `/pages/:id`: page summaries; file-backed storage supports HTML and metadata editing, while other providers may remain read-only. Stored HTML is not rendered or executed in the CMS.
 - `/configuration`: provider and GitHub workflow settings.
 - `POST /github/dispatch`: CSRF-protected dispatch of the saved workflow target.
+- `POST /mcp`: Entra OAuth-protected, read-only blog search and retrieval using Streamable HTTP.
 
 See the feature [quickstart](specs/001-admin-content-management/quickstart.md) and contracts for detailed checks and route behavior.
+
+### Run the MCP locally over HTTPS
+
+The local VS Code entry connects to `https://localhost:3000/mcp`; it does not start the CMS. To use the real Blob-backed MCP locally:
+
+1. Install and trust a local certificate authority with [mkcert](https://github.com/FiloSottile/mkcert), then create a certificate outside the repository. In PowerShell:
+
+   ```powershell
+   $certDir = Join-Path $env:LOCALAPPDATA 'FullswingCMS\certs'
+   New-Item -ItemType Directory -Force $certDir | Out-Null
+   mkcert -install
+   mkcert -cert-file (Join-Path $certDir 'localhost.pem') `
+     -key-file (Join-Path $certDir 'localhost-key.pem') localhost 127.0.0.1 ::1
+   ```
+
+2. For local testing without Entra authentication, set `CMS_MCP_ALLOW_ANONYMOUS=true` in `apps/fullswing-cms/.env`. `.vscode/mcp.json` connects directly to `https://localhost:3000/mcp` without prompt or OAuth requirements.
+   Alternatively, for authenticated testing: in the CMS Entra resource application, expose the delegated `mcp.read` scope for `api://<CMS_ENTRA_CLIENT_ID>` and add `https://localhost:3000/auth/callback` as a Web redirect URI. In a separate Entra client application for VS Code, add the delegated permission to that API, grant consent as required, and configure its supported public-client redirect/platform for VS Code's OAuth flow.
+3. Put local settings in the ignored `apps/fullswing-cms/.env` file. Use the Blob composition and a test container/account; do not point a local authoring CMS at production content by accident:
+
+   ```dotenv
+   CMS_BOOTSTRAP_MODULE=./blob-composition.mjs
+   HOST=127.0.0.1
+   PORT=3000
+   CMS_BLOB_CONNECTION_STRING=<test-storage-connection-string>
+   CMS_BLOB_CONTAINER_NAME=<test-container-name>
+   CMS_SECRET_ENCRYPTION_KEY=<base64-encoded-random-32-byte-key>
+   CMS_MCP_ALLOW_ANONYMOUS=true
+   CMS_MCP_RESOURCE_URL=https://localhost:3000/mcp
+   CMS_SESSION_COOKIE_SECRET=<random-secret-at-least-32-characters>
+   CMS_HTTPS_CERT_PATH=C:\Users\<user>\AppData\Local\FullswingCMS\certs\localhost.pem
+   CMS_HTTPS_KEY_PATH=C:\Users\<user>\AppData\Local\FullswingCMS\certs\localhost-key.pem
+   ```
+
+   `CMS_HTTPS_CERT_PATH` and `CMS_HTTPS_KEY_PATH` must both be set; if omitted, the server retains its existing HTTP behavior. Keep the local private key, Blob credential, Entra secret, and encryption key out of source control. The Blob composition creates the configured container if it does not exist.
+4. From the repository root, run `npm --workspace=fullswing-cms run start`. Sign in or initialize the container, then use **MCP: List Servers** / **MCP: Start Server** in VS Code. Tools are read-only (`search_blogs` and `get_blog`). Test search and retrieval; no MCP tool can create or update a blog.
+
+Local HTTPS is opt-in and configured only for direct local serving; Azure App Service terminates HTTPS and does not set these certificate variables. The MCP tool interface is read-only, but the same CMS process also serves browser authoring routes and shares the Blob credential. Use an isolated test container and credentials for local tests.
 Add/Edit markdown file - A page with a form to add/edit metadata for the .json sidecar files and a textarea for adding/editing markdown files. The textarea should validate the markdown and have a status bar with green checkbox or red x when validation changes. At the top there is a tab to switch from markdown editing or markdown preview. The preview shows the markdown formatted. There should be a toolbar above the textarea that applies the markdown syntax to the selected text. The toolbar should also have a button to add a file, it uploads to OneDrive with a progress bar to display the upload progress and inserts a link to the file in the textarea cursor position. Ideally, there would be an icon by the file hyperlink that shows the file type e.g. Word icon for .doc and .docx files.
 Add/Edit html file - A blank page for now.
 Configuration - A page to define the configuration values needed for GitHub action run by API, and the OneDrive integration
@@ -103,9 +157,3 @@ Technology:
 - Azure entra id for authentication
 - Bicep for infra deploy resources
 - Github action for CI/CD
-
-Plan:
-Analyze fullswing-blog/src/lib folder and verify what code should be moved to shared libs/ folder in root folder
-
-TODO
-- check fullswing-blog and fullswing-cms for code redundancy and candidates for moving to shared lib folder

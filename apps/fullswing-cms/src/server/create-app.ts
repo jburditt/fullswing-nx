@@ -2,6 +2,7 @@ import cookie from '@fastify/cookie';
 import formbody from '@fastify/formbody';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { ServerOptions as HttpsServerOptions } from 'node:https';
 import { fileURLToPath } from 'node:url';
 import type { CmsSession } from '../auth/session-store.js';
 import { registerErrorHandler } from './error-handler.js';
@@ -17,10 +18,12 @@ declare module 'fastify' {
 export interface CreateAppOptions {
   sessionCookieSecret: string;
   secureCookies: boolean;
+  https?: HttpsServerOptions;
 }
 
 export function createApp(options: CreateAppOptions): FastifyInstance {
   const app = Fastify({
+    ...(options.https ? { https: options.https } : {}),
     bodyLimit: 1_048_576,
     logController: new Fastify.LogController({ disableRequestLogging: true }),
     logger: cmsLoggerOptions,

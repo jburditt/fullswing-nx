@@ -4,7 +4,11 @@ import type { AdminAllowlist } from '../auth/identity-provider.js';
 import type { CmsSession, SessionStore } from '../auth/session-store.js';
 
 const SESSION_COOKIE = 'fullswing_cms_session';
-const PUBLIC_GET_PATHS = new Set(['/login', '/auth/callback']);
+const PUBLIC_GET_PATHS = new Set([
+  '/login',
+  '/auth/callback',
+  '/.well-known/oauth-protected-resource/mcp',
+]);
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export interface RequestGuardDependencies {
@@ -43,6 +47,9 @@ export function registerRequestGuards(
 ): void {
   app.addHook('onRequest', async (request, reply) => {
     const requestUrl = new URL(request.url, 'http://localhost');
+    if (requestUrl.pathname === '/mcp') {
+      return;
+    }
     if (dependencies.developmentSession && request.method === 'GET' && (
       requestUrl.pathname === '/login' || requestUrl.pathname === '/auth/callback'
     )) {
@@ -84,6 +91,9 @@ export function registerRequestGuards(
   });
 
   app.addHook('preValidation', async (request, reply) => {
+    if (new URL(request.url, 'http://localhost').pathname === '/mcp') {
+      return;
+    }
     if (SAFE_METHODS.has(request.method)) {
       return;
     }

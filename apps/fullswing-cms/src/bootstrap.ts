@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { ServerOptions as HttpsServerOptions } from 'node:https';
 import type { AdminAllowlist, IdentityProvider } from './auth/identity-provider.js';
 import type { CmsSession, SessionStore } from './auth/session-store.js';
 import type { ConfigurationStore } from './config/configuration-store.js';
@@ -17,6 +18,7 @@ import { registerBlogEditorRoutes } from './server/routes/blog-editor.js';
 import { registerConfigurationRoutes } from './server/routes/configuration.js';
 import { registerDashboardRoutes } from './server/routes/dashboard.js';
 import { registerGitHubWorkflowRoutes } from './server/routes/github-workflow.js';
+import { registerMcpRoutes, type McpRouteDependencies } from './server/routes/mcp.js';
 import { registerPageRoutes } from './server/routes/pages.js';
 
 export interface CmsApplicationDependencies {
@@ -30,6 +32,7 @@ export interface CmsApplicationDependencies {
   sessionCookieSecret: string;
   secureCookies: boolean;
   developmentSession?: CmsSession;
+  mcp?: McpRouteDependencies;
 }
 
 declare module 'fastify' {
@@ -57,12 +60,16 @@ function assertDependencies(dependencies: CmsApplicationDependencies): void {
   }
 }
 
-export async function createCmsApp(dependencies: CmsApplicationDependencies): Promise<FastifyInstance> {
+export async function createCmsApp(
+  dependencies: CmsApplicationDependencies,
+  options: { https?: HttpsServerOptions } = {},
+): Promise<FastifyInstance> {
   assertDependencies(dependencies);
 
   const app = createApp({
     sessionCookieSecret: dependencies.sessionCookieSecret,
     secureCookies: dependencies.secureCookies,
+    https: options.https,
   });
   app.decorate('cmsDependencies', dependencies);
   registerRequestGuards(app, {
@@ -132,15 +139,18 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
     secrets: dependencies.secretStore,
     dispatch: settings => github.dispatch(settings),
   });
+  if (dependencies.mcp) {
+    await registerMcpRoutes(app, dependencies.mcp);
+  }
 
   return app;
 }
 
 export async function startCms(
   dependencies: CmsApplicationDependencies,
-  options: { host?: string; port?: number } = {},
+  options: { host?: string; port?: number; https?: HttpsServerOptions } = {},
 ): Promise<FastifyInstance> {
-  const app = await createCmsApp(dependencies);
+  const app = await createCmsApp(dependencies, { https: options.https });
   await app.listen({
     host: options.host ?? process.env.HOST ?? (dependencies.developmentSession ? '127.0.0.1' : '0.0.0.0'),
     port: options.port ?? Number(process.env.PORT ?? 3000),

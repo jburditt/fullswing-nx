@@ -81,6 +81,7 @@ resource cmsAppSettings 'Microsoft.Web/sites/config@2022-09-01' = {
     CMS_ENTRA_CLIENT_ID: entraClientId
     CMS_ENTRA_CLIENT_SECRET: entraClientSecret
     CMS_ENTRA_REDIRECT_URI: entraRedirectUri
+    CMS_MCP_RESOURCE_URL: 'https://${cmsAppName}.azurewebsites.net/mcp'
     CMS_ADMIN_OBJECT_IDS: adminObjectIds
     CMS_SESSION_COOKIE_SECRET: sessionCookieSecret
     NODE_ENV: 'production'

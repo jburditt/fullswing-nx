@@ -67,8 +67,26 @@ export class BlobContentStorageProvider implements ContentStorageProvider {
       || left.metadata.title.localeCompare(right.metadata.title));
   }
 
+  async listBlogs(): Promise<BlogContent[]> {
+    const pairs = await this.discoverPairs('blog');
+    const entries = pairs.map(pair => ({
+      ...this.toSummary(pair, pairs),
+      kind: 'blog' as const,
+      markdown: pair.body,
+    }));
+    const routes = new Set<string>();
+    for (const entry of entries) {
+      if (routes.has(entry.route)) {
+        throw new CmsError('validation-failed', `Blob storage contains duplicate content route "${entry.route}".`, 400);
+      }
+      routes.add(entry.route);
+    }
+    return entries.sort((left, right) => right.metadata.dateValue.getTime() - left.metadata.dateValue.getTime()
+      || left.metadata.title.localeCompare(right.metadata.title));
+  }
+
   async readBlog(id: string): Promise<BlogContent | undefined> {
-    const pairs = await this.discoverPairs();
+    const pairs = await this.discoverPairs('blog');
     const pair = pairs.find(entry => entry.kind === 'blog' && this.idFor(entry) === id);
     return pair ? { ...this.toSummary(pair, pairs), kind: 'blog', markdown: pair.body } : undefined;
   }
@@ -122,10 +140,11 @@ export class BlobContentStorageProvider implements ContentStorageProvider {
     return this.toSummary(saved, savedPairs);
   }
 
-  private async discoverPairs(): Promise<ContentPair[]> {
+  private async discoverPairs(kindFilter?: 'blog' | 'page'): Promise<ContentPair[]> {
     const groups = new Map<string, Map<string, { name: string; etag: string }>>();
     try {
-      for await (const blob of this.container.listBlobsFlat({ prefix: `${this.contentPrefix}/` })) {
+      const prefix = kindFilter ? `${this.contentPrefix}/${kindFilter === 'blog' ? 'blog' : 'pages'}/` : `${this.contentPrefix}/`;
+      for await (const blob of this.container.listBlobsFlat({ prefix })) {
         const relativeName = blob.name.slice(this.contentPrefix.length + 1);
         const match = /^(blog|pages)\/(\d{4})\/([^/]+)\.(md|html|json)$/.exec(relativeName);
         if (!match) continue;
@@ -133,6 +152,7 @@ export class BlobContentStorageProvider implements ContentStorageProvider {
         if (!kindFolder || !year || !basename || !rawExtension) continue;
         const extension = rawExtension.toLowerCase();
         const kind = kindFolder === 'blog' ? 'blog' : 'page';
+        if (kindFilter && kind !== kindFilter) continue;
         if ((kind === 'blog' && extension === 'html') || (kind === 'page' && extension === 'md')) continue;
         if (!blob.properties.etag) {
           throw new CmsError('provider-unavailable', 'Blob storage did not return a version for content.', 502);

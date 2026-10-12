@@ -117,5 +117,26 @@ export function createCmsDependencies() {
       createdAt: Date.now(),
       expiresAt: Number.MAX_SAFE_INTEGER,
     },
+    mcp: {
+      allowAnonymous: true,
+      resourceUrl: process.env.CMS_MCP_RESOURCE_URL?.trim() || 'http://localhost:3000/mcp',
+      async resolveBlogSource() {
+        const configuration = await configurationStore.read();
+        if (!configuration) {
+          throw new CmsError('configuration-invalid', 'Configure content storage before using MCP.', 503);
+        }
+        const provider = await contentProviders.resolve({
+          ...configuration.contentProvider,
+          revision: configuration.revision,
+        });
+        if (!('listBlogs' in provider) || typeof provider.listBlogs !== 'function') {
+          throw new CmsError('configuration-invalid', 'The active content provider cannot search blog content.', 503);
+        }
+        return {
+          listBlogs: () => provider.listBlogs(),
+          readBlog: id => provider.readBlog(id),
+        };
+      },
+    },
   };
 }

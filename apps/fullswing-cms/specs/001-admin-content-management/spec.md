@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: Update the CMS to support a composition-selected content provider, local-file development storage under the Fullswing blog public directory, and an Azure deployment backed entirely by Blob Storage. OneDrive remains an optional provider for compositions that register it. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, configure provider and GitHub Action settings, and edit HTML page source only when the selected provider supports page writes. HTML source is never rendered or executed by the CMS.
+**Input**: Update the CMS to support a composition-selected content provider, local-file development storage under the Fullswing blog public directory, and an Azure deployment backed entirely by Blob Storage. OneDrive remains an optional provider for compositions that register it. Admins sign in, browse and filter content, edit Markdown and metadata with validation and preview, configure provider and GitHub Action settings, and edit HTML page source only when the selected provider supports page writes. HTML source is never rendered or executed by the CMS. The Azure composition also provides Entra-authenticated, read-only MCP search and retrieval for blogs.
 
 ### Session 2026-09-29
 
@@ -128,6 +128,23 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 3. **Given** the stored HTML contains scripts or event handlers, **When** an administrator opens the CMS page editor, **Then** the source is displayed as escaped text and is not executed.
 4. **Given** a provider does not support page writes, **When** an administrator opens a page, **Then** the CMS displays the read-only placeholder and offers no save controls.
 
+### User Story 7 - Search Blogs Through MCP (Priority: P2)
+
+An approved administrator connects an MCP client to the CMS and searches or retrieves blog content without using the browser CMS session. The MCP service exposes blogs only and is read-only.
+
+**Why this priority**: Authorized tools can retrieve and search the same Blob-backed blog source used by the publishing workflow without exposing CMS settings, secrets, pages, or write operations.
+
+**Independent Test**: Exercise the Streamable HTTP protocol with a fake Entra verifier and in-memory blog source; verify authentication, tool discovery, filtered search, retrieval, and rejection of unauthorized requests.
+
+**Acceptance Scenarios**:
+
+1. **Given** an MCP client requests protected-resource metadata, **When** it requests `/.well-known/oauth-protected-resource/mcp`, **Then** the CMS returns the resource URL, Entra authorization server, and supported `mcp.read` scope without requiring a CMS browser session.
+2. **Given** an MCP client initializes or uses a session, **When** it sends a valid Entra v2 bearer token with the CMS API audience, `mcp.read` scope, and an allowlisted tenant/object identity, **Then** the request is authorized; a missing, invalid, expired, wrong-tenant, wrong-scope, or non-allowlisted token is rejected.
+3. **Given** an authorized MCP session, **When** the client calls `search_blogs` with at least one keyword or filter, **Then** matching blogs are returned with metadata and a bounded excerpt, including unpublished blogs in the active Blob source.
+4. **Given** an authorized MCP session, **When** the client calls `get_blog` with an ID returned by search, **Then** the CMS returns that blog's metadata and Markdown, subject to the response size limit.
+5. **Given** an MCP client attempts to read pages or change content, configuration, or secrets, **When** it lists or calls tools, **Then** only the read-only blog search and retrieval tools are available.
+6. **Given** an MCP request has an untrusted origin, exceeds request or result bounds, uses an expired session, or arrives after the session cap is reached, **When** the request is processed, **Then** it is rejected without exposing protected content.
+
 ### Edge Cases
 
 - An authentication session expires while an administrator is editing; unsaved work is not silently discarded, and access requires renewed authentication.
@@ -151,6 +168,12 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - The CMS process restarts while using the Azure Blob composition; persisted configuration and secrets remain available, while in-memory administrator sessions are lost and require a new sign-in.
 - The static-blog workflow cannot access the Blob container, receives an empty/incomplete blog prefix, or fails during download; the build is not allowed to publish a stale or partial content set.
 - An HTML page is selected while the active provider is read-only; the CMS leaves it read-only and shows the placeholder.
+- An MCP client has a valid CMS browser session but no bearer access token; MCP access is denied because browser cookies are not MCP credentials.
+- An MCP access token is valid but lacks `mcp.read`, identifies another tenant, or is not allowlisted; the request is rejected without blog data.
+- MCP search is called without a keyword or filter, uses an invalid date range, or supplies an oversized value; the tool reports an input error rather than returning an unfiltered collection.
+- A blog exceeds the MCP retrieval response limit or the source fails; the tool reports an explicit error and does not return a success-shaped partial result.
+- The MCP session expires, the active-session cap is reached, or the CMS process restarts; the client must initialize a new session, and every request still requires a valid bearer token.
+- The local VS Code MCP client entry points to an HTTPS URL but does not start the CMS or provide the server's Entra/Blob settings; connecting requires the Blob composition, configured local HTTPS certificate, and registered OAuth client.
 
 ## Requirements *(mandatory)*
 
@@ -188,6 +211,14 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **FR-030**: Before each static-blog build, the GitHub Actions workflow MUST authenticate to Azure using federated identity, read the `content/blog/` Blob prefix, and stage its year-based Markdown/JSON pairs under `apps/fullswing-blog/public/blog/`.
 - **FR-031**: The Blob-to-static sync MUST replace the staged blog directory only after every listed blob has downloaded and every body/metadata pair is complete. An empty prefix, malformed path, missing sidecar, or failed download MUST fail the deployment instead of publishing stale or partial content. Initial repository-to-Blob seeding MUST be explicit and MUST refuse to overwrite a non-empty prefix.
 - **FR-032**: The Azure CMS deployment package MUST compile the CMS and its workspace libraries before deployment and MUST start the compiled entry point using App Service environment settings without requiring a `.env` file.
+- **FR-033**: The Azure Blob composition MUST expose a read-only Streamable HTTP MCP endpoint at `/mcp` and a public OAuth protected-resource metadata document at `/.well-known/oauth-protected-resource/mcp`. Other compositions MAY omit MCP.
+- **FR-034**: Every MCP request MUST present an Entra v2 bearer access token validated for the configured tenant, CMS API audience, issuer, and signature; the token MUST include the delegated `mcp.read` scope and an identity on the configured administrator allowlist. CMS browser-session cookies MUST NOT authorize MCP access.
+- **FR-035**: The MCP server MUST expose only `search_blogs` and `get_blog`. It MUST read blogs from the active Blob-backed provider, including unpublished blog pairs, and MUST NOT expose pages, CMS configuration, secrets, or write operations.
+- **FR-036**: `search_blogs` MUST support keyword search across Markdown and blog metadata, title/category/author filters, inclusive date bounds, and a result limit from 1 to 50 (default 10). It MUST require at least one search criterion, validate real calendar dates and date ordering, and return metadata plus excerpts of at most 280 characters.
+- **FR-037**: `get_blog` MUST accept a blog ID and return its metadata and Markdown only when the item exists and its Markdown is no more than 300,000 characters; errors MUST be explicit.
+- **FR-038**: The MCP endpoint MUST reject requests from untrusted origins, cap request bodies at 64 KiB and active sessions at 100, expire sessions after 30 minutes idle, and require bearer authentication for every protocol request, including requests within an initialized session.
+- **FR-039**: MCP authentication and provider errors MUST NOT expose access tokens, secret configuration, or protected content in error responses. The MCP feature MUST NOT claim storage-level read-only isolation: it shares the CMS process and Blob credentials, while its tool surface remains read-only.
+- **FR-040**: The VS Code MCP client configuration MAY name the local `/mcp` URL, but MUST NOT imply that client configuration starts the CMS, provides Entra credentials, or makes an unconfigured local composition host the endpoint.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -199,6 +230,7 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **Integration Configuration**: The selected content-storage provider and its settings, together with the values needed to configure GitHub Action invocation; secrets are protected and masked.
 - **Edit Version**: The version of an item an administrator loaded, used to detect whether the stored item changed before a save.
 - **Runtime Persistence Composition**: Deployment-selected implementations of configuration, secret, and session stores. The Azure composition stores configuration in Blob Storage, stores authenticated ciphertext for secrets in Blob Storage, and stores sessions in process memory.
+- **MCP Session**: An in-memory Streamable HTTP protocol session. It is distinct from the CMS browser session and requires an Entra bearer token on each request.
 
 ## Success Criteria *(mandatory)*
 
@@ -226,6 +258,9 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - **SC-020**: Sync tests prove that Blob blog files land under `public/blog/<year>/`, stale local posts are removed after a successful sync, and failed/empty/incomplete downloads leave the previously staged content untouched or fail the build.
 - **SC-021**: The CMS host, persistent Blob content, and static site use separate resource groups; the CMS and static-blog teardown workflows cannot delete persistent CMS content.
 - **SC-022**: The CMS deployment workflow runs the CMS tests before deployment, and the static publishing workflow's Blob sync tests pass before content is staged for a build.
+- **SC-023**: The MCP integration test completes initialize, tool listing, blog search, and blog retrieval over a local HTTP listener using test dependencies, and rejects unauthenticated or unauthorized requests.
+- **SC-024**: 100% of MCP tool calls can read only blogs and cannot mutate storage or retrieve pages, configuration, or secrets; valid searches return only entries matching the requested criteria and bounded result limit.
+- **SC-025**: Every MCP request without a valid Entra bearer token, required `mcp.read` scope, matching tenant, and allowlisted identity is rejected, regardless of whether the client presents an initialized session ID.
 
 ## Assumptions
 
@@ -246,3 +281,4 @@ An administrator can edit HTML source and metadata when local-file storage is ac
 - HTML page source may be edited through the local-file provider, but HTML preview, rendering, Svelte execution, and publication remain out of scope.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.
 - Optional Svelte enhancements may be added later but are not required for the core administration workflows in this release.
+- MCP is enabled by the Azure Blob composition and may be run locally by selecting that composition and configuring the opt-in local HTTPS certificate paths. It uses the CMS Entra application registration and immutable administrator allowlist. The local VS Code entry is a client connection setting only; it does not start the CMS or provide its Entra/Blob settings. Automated local protocol tests use a fake token verifier and in-memory blog source; they do not verify live Entra or Blob access.

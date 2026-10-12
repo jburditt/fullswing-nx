@@ -138,6 +138,29 @@ test('Blob provider supports HTML pages and duplicate blog basenames across year
   ]);
 });
 
+test('Blob provider lists complete blog content without including page pairs', async () => {
+  const provider = createProvider();
+  await provider.savePage({
+    configRevision: 'config-1',
+    basename: 'about',
+    html: '<main>About</main>',
+    metadata: metadata('2026-04-01', 'About'),
+  });
+  const saved = await provider.saveBlog({
+    configRevision: 'config-1',
+    basename: 'mcp-search',
+    markdown: '# Searchable blog',
+    metadata: metadata('2026-05-01', 'Searchable blog'),
+  });
+
+  const blogs = await provider.listBlogs();
+
+  assert.equal(blogs.length, 1);
+  assert.equal(blogs[0]?.id, saved.id);
+  assert.equal(blogs[0]?.markdown, '# Searchable blog');
+  assert.equal(blogs[0]?.kind, 'blog');
+});
+
 test('Blob provider rejects orphaned pairs, malformed metadata, and invalid basenames', async () => {
   const container = new FakeBlobContainer();
   const provider = createProvider(container);

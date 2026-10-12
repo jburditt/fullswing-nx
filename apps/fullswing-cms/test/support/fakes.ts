@@ -176,6 +176,12 @@ export class FakeContentStorageProvider implements ContentStorageProvider {
     }));
   }
 
+  async listBlogs(): Promise<BlogContent[]> {
+    return [...this.entries.values()]
+      .filter((entry): entry is BlogContent => entry.kind === 'blog')
+      .map(entry => structuredClone(entry));
+  }
+
   async readBlog(id: string): Promise<BlogContent | undefined> {
     const entry = this.entries.get(id);
     return entry?.kind === 'blog' ? structuredClone(entry) : undefined;

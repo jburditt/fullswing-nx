@@ -17,6 +17,7 @@ import { registerBlogEditorRoutes } from './server/routes/blog-editor.js';
 import { registerConfigurationRoutes } from './server/routes/configuration.js';
 import { registerDashboardRoutes } from './server/routes/dashboard.js';
 import { registerGitHubWorkflowRoutes } from './server/routes/github-workflow.js';
+import { registerMcpRoutes, type McpRouteDependencies } from './server/routes/mcp.js';
 import { registerPageRoutes } from './server/routes/pages.js';
 
 export interface CmsApplicationDependencies {
@@ -30,6 +31,7 @@ export interface CmsApplicationDependencies {
   sessionCookieSecret: string;
   secureCookies: boolean;
   developmentSession?: CmsSession;
+  mcp?: McpRouteDependencies;
 }
 
 declare module 'fastify' {
@@ -132,6 +134,9 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
     secrets: dependencies.secretStore,
     dispatch: settings => github.dispatch(settings),
   });
+  if (dependencies.mcp) {
+    await registerMcpRoutes(app, dependencies.mcp);
+  }
 
   return app;
 }

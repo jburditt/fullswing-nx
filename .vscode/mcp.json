@@ -1,5 +1,9 @@
 {
   "servers": {
+    "fullswing-blog-local": {
+      "type": "http",
+      "url": "https://localhost:3000/mcp"
+    },
     "mcp-image": {
       "command": "npx",
       "args": ["-y", "mcp-image"],

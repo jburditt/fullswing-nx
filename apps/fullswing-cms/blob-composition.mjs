@@ -68,7 +68,8 @@ export async function createCmsDependencies() {
     allowlist = new ConfiguredAdminAllowlist([]);
   }
 
-  if (!allowAnonymousMcp && tenantId && clientId && allowlist) {
+  if (!allowAnonymousMcp && tenantId && clientId
+    && adminObjectIdsRaw?.split(',').some(objectId => objectId.trim())) {
     authenticator = new EntraMcpAuthenticator({
       tenantId,
       clientId,

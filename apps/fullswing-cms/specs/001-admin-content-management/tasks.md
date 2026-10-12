@@ -353,3 +353,17 @@ Each story has a separate independent test criterion above. Automated tests are 
 - [x] T110 Verify both workflows and Bicep templates, run CMS and static-blog tests/builds plus Blob sync tests, and confirm the diff is clean.
 
 **Operational boundary**: Neither the CMS nor static-blog workflow deletes `rg-fullswing-content`. Only the dedicated persistent-content lifecycle may remove that group; static-blog teardown remains scoped to `rg-fullswing-blog`.
+
+## Phase 17: Authenticated Read-Only Blog MCP Endpoint
+
+**Purpose**: Expose Blob-backed blog search and retrieval to authorized MCP clients without broadening the browser CMS session or enabling content writes.
+
+- [x] T111 Add the MCP SDK, token-validation, and schema-validation dependencies to `apps/fullswing-cms/package.json` and update the root `package-lock.json`.
+- [x] T112 Implement Entra v2 bearer-token validation for the CMS API audience, `mcp.read` delegated scope, configured tenant, and administrator allowlist in `apps/fullswing-cms/src/auth/mcp-authentication.ts`.
+- [x] T113 Implement `search_blogs` and `get_blog`, plus the Streamable HTTP `/mcp` route, public protected-resource metadata, origin checks, per-request authentication, bounded bodies, and in-memory session limits in `apps/fullswing-cms/src/mcp/blog-tools.ts`, `apps/fullswing-cms/src/server/routes/mcp.ts`, `apps/fullswing-cms/src/server/request-guards.ts`, and `apps/fullswing-cms/src/bootstrap.ts`.
+- [x] T114 Wire the blog-only source through the Azure Blob composition, add the deployed MCP resource URL setting, and add the local VS Code client URL in `apps/fullswing-cms/blob-composition.mjs`, `apps/fullswing-cms/infra/cms-host.bicep`, and `.vscode/mcp.json`.
+- [x] T115 Add authentication, metadata, tool, and local loopback HTTP integration coverage in `apps/fullswing-cms/test/integration/mcp.test.ts`; add Blob blog-listing coverage in `apps/fullswing-cms/test/integration/blob-content-provider.test.ts`.
+- [x] T116 Update MCP requirements, architecture, adapter capability, operator verification, and known local-client limitations in `spec.md`, `plan.md`, `research.md`, `quickstart.md`, `contracts/content-storage-provider.md`, and `apps/fullswing-cms/README.md`.
+- [x] T117 Run `npm exec nx run fullswing-cms:test` and verify Bicep compilation; local protocol verification uses a fake token verifier and in-memory source and does not substitute for live Entra or Blob validation.
+
+**Operational boundary**: The endpoint is enabled by the Azure Blob composition. It shares the CMS process and Blob credential, so read-only behavior is enforced by the MCP tool surface rather than a separate Storage identity. `.vscode/mcp.json` configures a client URL only; it does not start a local HTTPS server or supply an Entra token.

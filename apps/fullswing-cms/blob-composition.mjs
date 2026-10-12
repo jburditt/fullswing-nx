@@ -49,7 +49,8 @@ export async function createCmsDependencies() {
     revision,
     typeof settings.contentPrefix === 'string' ? settings.contentPrefix : 'content',
   ));
-  const allowAnonymousMcp = process.env.CMS_MCP_ALLOW_ANONYMOUS?.trim().toLowerCase() === 'true';
+  const allowAnonymousMcp = process.env.NODE_ENV !== 'production'
+    && process.env.CMS_MCP_ALLOW_ANONYMOUS?.trim().toLowerCase() === 'true';
   let authenticator;
   const rawResourceUrl = process.env.CMS_MCP_RESOURCE_URL?.trim() || 'https://localhost:3000/mcp';
   const tenantId = process.env.CMS_ENTRA_TENANT_ID?.trim();

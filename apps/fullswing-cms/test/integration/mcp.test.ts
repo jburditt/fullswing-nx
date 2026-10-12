@@ -361,3 +361,71 @@ test('MCP rejects invalid tokens, non-allowlisted administrators, missing scopes
   assert.equal(wrongScope.statusCode, 403);
   assert.equal(foreignOrigin.statusCode, 403);
 });
+
+test('MCP supports anonymous access when allowAnonymous is configured', async () => {
+  const contentProvider = new FakeContentStorageProvider();
+  contentProvider.seed(makeBlog(
+    'cloud-patterns',
+    'Cloud Application Patterns',
+    '# Cloud Application Patterns\n\nUse an orchestrator for resilient deployments.',
+    '2026-08-14',
+  ));
+  const providers = new ContentProviderRegistry();
+  providers.register('memory', (_settings, revision) => new FakeContentStorageProvider('memory', revision));
+  const app = await createCmsApp({
+    configurationStore: new FakeConfigurationStore(),
+    secretStore: new FakeSecretStore(),
+    identityProvider: new FakeIdentityProvider(),
+    sessionStore: new FakeSessionStore(),
+    allowlist: new FakeAdminAllowlist(),
+    contentProviders: providers,
+    sessionCookieSecret: 'mcp-test-cookie-secret-with-more-than-32-characters',
+    secureCookies: false,
+    mcp: {
+      allowAnonymous: true,
+      resourceUrl,
+      resolveBlogSource: async () => ({
+        async listBlogs() {
+          return contentProvider.listBlogs();
+        },
+        async readBlog(id) {
+          return contentProvider.readBlog(id);
+        },
+      }),
+    },
+  });
+
+  const initResponse = await app.inject({
+    method: 'POST',
+    url: '/mcp',
+    headers: {
+      host: 'cms.example.test',
+      accept: 'application/json, text/event-stream',
+      'content-type': 'application/json',
+    },
+    payload: initializeMessage,
+  });
+
+  assert.equal(initResponse.statusCode, 200);
+  const sessionId = initResponse.headers['mcp-session-id'];
+  assert.ok(sessionId);
+
+  const toolsResponse = await app.inject({
+    method: 'POST',
+    url: '/mcp',
+    headers: {
+      host: 'cms.example.test',
+      accept: 'application/json, text/event-stream',
+      'content-type': 'application/json',
+      'mcp-session-id': String(sessionId),
+    },
+    payload: { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
+  });
+
+  assert.equal(toolsResponse.statusCode, 200);
+  const tools = toolsResponse.json() as { result: { tools: Array<{ name: string }> } };
+  assert.deepEqual(tools.result.tools.map(tool => tool.name), ['search_blogs', 'get_blog']);
+
+  await app.close();
+});
+

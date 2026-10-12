@@ -49,31 +49,58 @@ export async function createCmsDependencies() {
     revision,
     typeof settings.contentPrefix === 'string' ? settings.contentPrefix : 'content',
   ));
-  const tenantId = requiredSetting('CMS_ENTRA_TENANT_ID');
-  const clientId = requiredSetting('CMS_ENTRA_CLIENT_ID');
-  const adminObjectIds = requiredSetting('CMS_ADMIN_OBJECT_IDS')
-    .split(',')
-    .map(objectId => objectId.trim())
-    .filter(Boolean);
-  if (adminObjectIds.length === 0) throw new Error('CMS_ADMIN_OBJECT_IDS must include at least one object ID.');
+  const allowAnonymousMcp = process.env.CMS_MCP_ALLOW_ANONYMOUS?.trim().toLowerCase() === 'true';
+  let authenticator;
+  const rawResourceUrl = process.env.CMS_MCP_RESOURCE_URL?.trim() || 'https://localhost:3000/mcp';
+  const tenantId = process.env.CMS_ENTRA_TENANT_ID?.trim();
+  const clientId = process.env.CMS_ENTRA_CLIENT_ID?.trim();
+  const adminObjectIdsRaw = process.env.CMS_ADMIN_OBJECT_IDS?.trim();
 
-  const allowlist = new ConfiguredAdminAllowlist(adminObjectIds.map(objectId => ({ tenantId, objectId })));
-  const authenticator = new EntraMcpAuthenticator({
-    tenantId,
-    clientId,
-    resourceUrl: requiredSetting('CMS_MCP_RESOURCE_URL'),
-    allowlist,
-  });
+  let allowlist;
+  if (adminObjectIdsRaw && tenantId) {
+    const adminObjectIds = adminObjectIdsRaw
+      .split(',')
+      .map(objectId => objectId.trim())
+      .filter(Boolean);
+    allowlist = new ConfiguredAdminAllowlist(adminObjectIds.map(objectId => ({ tenantId, objectId })));
+  } else {
+    allowlist = new ConfiguredAdminAllowlist([]);
+  }
 
-  const oauthClient = new MsalEntraOAuthClient({
-    clientId,
-    tenantId,
-    clientSecret: requiredSetting('CMS_ENTRA_CLIENT_SECRET'),
-    redirectUri: requiredSetting('CMS_ENTRA_REDIRECT_URI'),
-    signInScopes: ['openid', 'profile', 'email'],
-    cacheSecretReference: 'entra-msal-token-cache',
-    secretStore,
-  });
+  if (!allowAnonymousMcp && tenantId && clientId && allowlist) {
+    authenticator = new EntraMcpAuthenticator({
+      tenantId,
+      clientId,
+      resourceUrl: rawResourceUrl,
+      allowlist,
+    });
+  } else if (!allowAnonymousMcp) {
+    throw new Error('CMS_ENTRA_TENANT_ID, CMS_ENTRA_CLIENT_ID, and CMS_ADMIN_OBJECT_IDS are required unless CMS_MCP_ALLOW_ANONYMOUS=true.');
+  }
+
+  const clientSecret = process.env.CMS_ENTRA_CLIENT_SECRET?.trim();
+  const redirectUri = process.env.CMS_ENTRA_REDIRECT_URI?.trim();
+  let oauthClient;
+  if (clientId && tenantId && clientSecret && redirectUri) {
+    oauthClient = new MsalEntraOAuthClient({
+      clientId,
+      tenantId,
+      clientSecret,
+      redirectUri,
+      signInScopes: ['openid', 'profile', 'email'],
+      cacheSecretReference: 'entra-msal-token-cache',
+      secretStore,
+    });
+  } else {
+    oauthClient = {
+      async beginSignIn() {
+        throw new Error('Entra authentication is not fully configured.');
+      },
+      async completeSignIn() {
+        throw new Error('Entra authentication is not fully configured.');
+      },
+    };
+  }
 
   return {
     configurationStore,
@@ -85,6 +112,8 @@ export async function createCmsDependencies() {
     registerOneDrive: false,
     mcp: {
       authenticator,
+      allowAnonymous: allowAnonymousMcp,
+      resourceUrl: rawResourceUrl,
       async resolveBlogSource() {
         const configuration = await configurationStore.read();
         if (!configuration) {

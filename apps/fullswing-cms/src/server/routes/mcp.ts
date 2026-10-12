@@ -9,7 +9,9 @@ interface ActiveMcpSession extends McpBlogServer {
 }
 
 export interface McpRouteDependencies {
-  authenticator: EntraMcpAuthenticator;
+  authenticator?: EntraMcpAuthenticator;
+  resourceUrl?: URL | string;
+  allowAnonymous?: boolean;
   resolveBlogSource(): Promise<BlogSearchSource>;
 }
 
@@ -47,15 +49,29 @@ export async function registerMcpRoutes(
   dependencies: McpRouteDependencies,
 ): Promise<void> {
   const authenticator = dependencies.authenticator;
-  const metadataUrl = new URL('/.well-known/oauth-protected-resource/mcp', authenticator.resourceUrl.origin);
-  app.get(metadataUrl.pathname, async (_request, reply) => reply
-    .type('application/json; charset=utf-8')
-    .send({
-      resource: authenticator.resourceUrl.href,
-      authorization_servers: [authenticator.authorizationServer],
-      scopes_supported: [authenticator.scopeUri],
-      bearer_methods_supported: ['header'],
-    }));
+  const allowAnonymous = dependencies.allowAnonymous ?? false;
+  if (!authenticator && !allowAnonymous) {
+    throw new Error('An MCP authenticator is required unless allowAnonymous is enabled.');
+  }
+
+  const rawResourceUrl = dependencies.resourceUrl
+    ?? (authenticator ? authenticator.resourceUrl : undefined);
+  if (!rawResourceUrl) {
+    throw new Error('A resourceUrl is required for MCP routes.');
+  }
+  const resourceUrl = typeof rawResourceUrl === 'string' ? new URL(rawResourceUrl) : rawResourceUrl;
+
+  if (authenticator) {
+    const metadataUrl = new URL('/.well-known/oauth-protected-resource/mcp', authenticator.resourceUrl.origin);
+    app.get(metadataUrl.pathname, async (_request, reply) => reply
+      .type('application/json; charset=utf-8')
+      .send({
+        resource: authenticator.resourceUrl.href,
+        authorization_servers: [authenticator.authorizationServer],
+        scopes_supported: [authenticator.scopeUri],
+        bearer_methods_supported: ['header'],
+      }));
+  }
 
   const source: BlogSearchSource = {
     async listBlogs() {
@@ -82,19 +98,24 @@ export async function registerMcpRoutes(
   }
 
   app.all('/mcp', { bodyLimit: 64 * 1024 }, async (request, reply) => {
-    const resourceOrigin = authenticator.resourceUrl.origin;
+    const resourceOrigin = resourceUrl.origin;
     if (!hasAllowedOrigin(request, resourceOrigin)) {
       return reply.code(403).send({ error: 'The MCP request origin is not allowed.' });
     }
 
     let authInfo;
-    try {
-      authInfo = await authenticator.authenticate(request.headers.authorization);
-    } catch (error) {
-      if (error instanceof McpAuthenticationError) {
-        return unauthorized(reply, authenticator, error.statusCode, error.message);
+    if (authenticator) {
+      try {
+        authInfo = await authenticator.authenticate(request.headers.authorization);
+      } catch (error) {
+        if (allowAnonymous && (!request.headers.authorization || request.headers.authorization.trim() === '')) {
+          authInfo = undefined;
+        } else if (error instanceof McpAuthenticationError) {
+          return unauthorized(reply, authenticator, error.statusCode, error.message);
+        } else {
+          throw error;
+        }
       }
-      throw error;
     }
 
     await removeExpiredSessions();
@@ -124,7 +145,7 @@ export async function registerMcpRoutes(
     }
     session.lastUsedAt = Date.now();
 
-    const target = new URL(request.url, authenticator.resourceUrl);
+    const target = new URL(request.url, resourceUrl);
     if (target.origin !== resourceOrigin || target.pathname !== '/mcp') {
       return reply.code(400).send({ error: 'The MCP request target is invalid.' });
     }

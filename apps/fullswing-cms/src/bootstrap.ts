@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { ServerOptions as HttpsServerOptions } from 'node:https';
 import type { AdminAllowlist, IdentityProvider } from './auth/identity-provider.js';
 import type { CmsSession, SessionStore } from './auth/session-store.js';
 import type { ConfigurationStore } from './config/configuration-store.js';
@@ -59,12 +60,16 @@ function assertDependencies(dependencies: CmsApplicationDependencies): void {
   }
 }
 
-export async function createCmsApp(dependencies: CmsApplicationDependencies): Promise<FastifyInstance> {
+export async function createCmsApp(
+  dependencies: CmsApplicationDependencies,
+  options: { https?: HttpsServerOptions } = {},
+): Promise<FastifyInstance> {
   assertDependencies(dependencies);
 
   const app = createApp({
     sessionCookieSecret: dependencies.sessionCookieSecret,
     secureCookies: dependencies.secureCookies,
+    https: options.https,
   });
   app.decorate('cmsDependencies', dependencies);
   registerRequestGuards(app, {
@@ -143,9 +148,9 @@ export async function createCmsApp(dependencies: CmsApplicationDependencies): Pr
 
 export async function startCms(
   dependencies: CmsApplicationDependencies,
-  options: { host?: string; port?: number } = {},
+  options: { host?: string; port?: number; https?: HttpsServerOptions } = {},
 ): Promise<FastifyInstance> {
-  const app = await createCmsApp(dependencies);
+  const app = await createCmsApp(dependencies, { https: options.https });
   await app.listen({
     host: options.host ?? process.env.HOST ?? (dependencies.developmentSession ? '127.0.0.1' : '0.0.0.0'),
     port: options.port ?? Number(process.env.PORT ?? 3000),

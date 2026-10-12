@@ -173,7 +173,7 @@ An approved administrator connects an MCP client to the CMS and searches or retr
 - MCP search is called without a keyword or filter, uses an invalid date range, or supplies an oversized value; the tool reports an input error rather than returning an unfiltered collection.
 - A blog exceeds the MCP retrieval response limit or the source fails; the tool reports an explicit error and does not return a success-shaped partial result.
 - The MCP session expires, the active-session cap is reached, or the CMS process restarts; the client must initialize a new session, and every request still requires a valid bearer token.
-- The local VS Code MCP client entry points to an HTTPS URL but does not start the CMS or supply an Entra access token; connecting requires a separately configured HTTPS-hosted endpoint and authenticated client.
+- The local VS Code MCP client entry points to an HTTPS URL but does not start the CMS or provide the server's Entra/Blob settings; connecting requires the Blob composition, configured local HTTPS certificate, and registered OAuth client.
 
 ## Requirements *(mandatory)*
 
@@ -281,4 +281,4 @@ An approved administrator connects an MCP client to the CMS and searches or retr
 - HTML page source may be edited through the local-file provider, but HTML preview, rendering, Svelte execution, and publication remain out of scope.
 - The existing shared content-domain contract and validation are the reuse boundary for both applications. Publisher-specific filesystem discovery, Markdown rendering, static layout, routes, and asset copying remain outside the CMS scope unless a separate shared need is established.
 - Optional Svelte enhancements may be added later but are not required for the core administration workflows in this release.
-- MCP is enabled only by the Azure Blob composition and uses the CMS Entra application registration and immutable administrator allowlist. The existing local VS Code entry is a client connection setting only; the file composition does not mount `/mcp`, and the local entry does not start an HTTPS server or perform Entra token acquisition. Automated local protocol tests use a fake token verifier and in-memory blog source; they do not verify live Entra or Blob access.
+- MCP is enabled by the Azure Blob composition and may be run locally by selecting that composition and configuring the opt-in local HTTPS certificate paths. It uses the CMS Entra application registration and immutable administrator allowlist. The local VS Code entry is a client connection setting only; it does not start the CMS or provide its Entra/Blob settings. Automated local protocol tests use a fake token verifier and in-memory blog source; they do not verify live Entra or Blob access.

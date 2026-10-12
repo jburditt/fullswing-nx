@@ -100,6 +100,43 @@ The Configuration page displays saved non-secret values and only whether the Git
 - `POST /mcp`: Entra OAuth-protected, read-only blog search and retrieval using Streamable HTTP.
 
 See the feature [quickstart](specs/001-admin-content-management/quickstart.md) and contracts for detailed checks and route behavior.
+
+### Run the MCP locally over HTTPS
+
+The local VS Code entry connects to `https://localhost:3000/mcp`; it does not start the CMS. To use the real Blob-backed MCP locally:
+
+1. Install and trust a local certificate authority with [mkcert](https://github.com/FiloSottile/mkcert), then create a certificate outside the repository. In PowerShell:
+
+   ```powershell
+   $certDir = Join-Path $env:LOCALAPPDATA 'FullswingCMS\certs'
+   New-Item -ItemType Directory -Force $certDir | Out-Null
+   mkcert -install
+   mkcert -cert-file (Join-Path $certDir 'localhost.pem') `
+     -key-file (Join-Path $certDir 'localhost-key.pem') localhost 127.0.0.1 ::1
+   ```
+
+2. For local testing without Entra authentication, set `CMS_MCP_ALLOW_ANONYMOUS=true` in `apps/fullswing-cms/.env`. `.vscode/mcp.json` connects directly to `https://localhost:3000/mcp` without prompt or OAuth requirements.
+   Alternatively, for authenticated testing: in the CMS Entra resource application, expose the delegated `mcp.read` scope for `api://<CMS_ENTRA_CLIENT_ID>` and add `https://localhost:3000/auth/callback` as a Web redirect URI. In a separate Entra client application for VS Code, add the delegated permission to that API, grant consent as required, and configure its supported public-client redirect/platform for VS Code's OAuth flow.
+3. Put local settings in the ignored `apps/fullswing-cms/.env` file. Use the Blob composition and a test container/account; do not point a local authoring CMS at production content by accident:
+
+   ```dotenv
+   CMS_BOOTSTRAP_MODULE=./blob-composition.mjs
+   HOST=127.0.0.1
+   PORT=3000
+   CMS_BLOB_CONNECTION_STRING=<test-storage-connection-string>
+   CMS_BLOB_CONTAINER_NAME=<test-container-name>
+   CMS_SECRET_ENCRYPTION_KEY=<base64-encoded-random-32-byte-key>
+   CMS_MCP_ALLOW_ANONYMOUS=true
+   CMS_MCP_RESOURCE_URL=https://localhost:3000/mcp
+   CMS_SESSION_COOKIE_SECRET=<random-secret-at-least-32-characters>
+   CMS_HTTPS_CERT_PATH=C:\Users\<user>\AppData\Local\FullswingCMS\certs\localhost.pem
+   CMS_HTTPS_KEY_PATH=C:\Users\<user>\AppData\Local\FullswingCMS\certs\localhost-key.pem
+   ```
+
+   `CMS_HTTPS_CERT_PATH` and `CMS_HTTPS_KEY_PATH` must both be set; if omitted, the server retains its existing HTTP behavior. Keep the local private key, Blob credential, Entra secret, and encryption key out of source control. The Blob composition creates the configured container if it does not exist.
+4. From the repository root, run `npm --workspace=fullswing-cms run start`. Sign in or initialize the container, then use **MCP: List Servers** / **MCP: Start Server** in VS Code. Tools are read-only (`search_blogs` and `get_blog`). Test search and retrieval; no MCP tool can create or update a blog.
+
+Local HTTPS is opt-in and configured only for direct local serving; Azure App Service terminates HTTPS and does not set these certificate variables. The MCP tool interface is read-only, but the same CMS process also serves browser authoring routes and shares the Blob credential. Use an isolated test container and credentials for local tests.
 Add/Edit markdown file - A page with a form to add/edit metadata for the .json sidecar files and a textarea for adding/editing markdown files. The textarea should validate the markdown and have a status bar with green checkbox or red x when validation changes. At the top there is a tab to switch from markdown editing or markdown preview. The preview shows the markdown formatted. There should be a toolbar above the textarea that applies the markdown syntax to the selected text. The toolbar should also have a button to add a file, it uploads to OneDrive with a progress bar to display the upload progress and inserts a link to the file in the textarea cursor position. Ideally, there would be an icon by the file hyperlink that shows the file type e.g. Word icon for .doc and .docx files.
 Add/Edit html file - A blank page for now.
 Configuration - A page to define the configuration values needed for GitHub action run by API, and the OneDrive integration
@@ -120,9 +157,3 @@ Technology:
 - Azure entra id for authentication
 - Bicep for infra deploy resources
 - Github action for CI/CD
-
-Plan:
-Analyze fullswing-blog/src/lib folder and verify what code should be moved to shared libs/ folder in root folder
-
-TODO
-- check fullswing-blog and fullswing-cms for code redundancy and candidates for moving to shared lib folder

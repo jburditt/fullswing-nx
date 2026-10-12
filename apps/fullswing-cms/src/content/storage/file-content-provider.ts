@@ -55,6 +55,24 @@ export class FileContentStorageProvider implements ContentStorageProvider {
       || left.metadata.title.localeCompare(right.metadata.title));
   }
 
+  async listBlogs(): Promise<BlogContent[]> {
+    const pairs = (await this.discoverPairs()).filter(entry => entry.kind === 'blog');
+    const entries = pairs.map(pair => ({
+      ...this.toSummary(pair, pairs),
+      kind: 'blog' as const,
+      markdown: pair.body,
+    }));
+    const routes = new Set<string>();
+    for (const entry of entries) {
+      if (routes.has(entry.route)) {
+        throw new CmsError('validation-failed', `Local files contain duplicate content route "${entry.route}".`, 400);
+      }
+      routes.add(entry.route);
+    }
+    return entries.sort((left, right) => right.metadata.dateValue.getTime() - left.metadata.dateValue.getTime()
+      || left.metadata.title.localeCompare(right.metadata.title));
+  }
+
   async readBlog(id: string): Promise<BlogContent | undefined> {
     const pairs = await this.discoverPairs();
     const pair = pairs.find(entry => entry.kind === 'blog' && this.idFor(entry) === id);

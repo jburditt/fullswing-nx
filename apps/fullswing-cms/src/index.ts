@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import type { CmsApplicationDependencies } from './bootstrap.js';
 import { startCms } from './bootstrap.js';
 import { CmsError } from './content/domain/content-errors.js';
+import { localHttpsOptionsFromEnvironment } from './server/local-https.js';
 
 export { createCmsApp, startCms } from './bootstrap.js';
 
@@ -24,7 +25,9 @@ export async function runCmsFromEnvironment(environment: NodeJS.ProcessEnv = pro
   if (typeof composition.createCmsDependencies !== 'function') {
     throw new CmsError('configuration-invalid', 'The CMS composition module must export createCmsDependencies().', 500);
   }
-  await startCms(await composition.createCmsDependencies());
+  await startCms(await composition.createCmsDependencies(), {
+    https: localHttpsOptionsFromEnvironment(environment),
+  });
 }
 
 const entryPoint = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : undefined;

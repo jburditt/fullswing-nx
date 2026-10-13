@@ -165,14 +165,18 @@ test('login sets a signed state cookie and a successful callback creates an admi
 
   const login = await app.inject({ method: 'GET', url: '/login?returnTo=%2Fdashboard' });
   const stylesheet = await app.inject({ method: 'GET', url: '/assets/cms.css' });
+  const favicon = await app.inject({ method: 'GET', url: '/favicon.png' });
   const state = login.body.match(/state=([^&"]+)/)?.[1];
   const loginCookie = login.headers['set-cookie'];
   const cookiePair = (Array.isArray(loginCookie) ? loginCookie[0] : loginCookie)?.split(';')[0];
   assert.ok(state);
   assert.ok(cookiePair?.startsWith('fullswing_cms_oauth_state='));
   assert.match(login.body, /src="\/assets\/logo\.jpg"/);
+  assert.match(login.body, /<link rel="icon" href="\/favicon\.png" type="image\/png" \/>/);
   assert.equal(stylesheet.statusCode, 200);
   assert.match(stylesheet.body, /\.cms-header/);
+  assert.equal(favicon.statusCode, 200);
+  assert.match(String(favicon.headers['content-type'] ?? ''), /^image\/png/);
 
   const callback = await app.inject({
     method: 'GET',

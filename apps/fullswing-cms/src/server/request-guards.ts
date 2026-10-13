@@ -7,6 +7,7 @@ const SESSION_COOKIE = 'fullswing_cms_session';
 const PUBLIC_GET_PATHS = new Set([
   '/login',
   '/auth/callback',
+  '/favicon.png',
   '/.well-known/oauth-protected-resource/mcp',
 ]);
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);

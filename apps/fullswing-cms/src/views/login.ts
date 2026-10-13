@@ -8,7 +8,7 @@ export function renderLoginPage(authorizationUrl: string): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Login | Fullswing CMS</title>
-    <link rel="icon" href="/assets/logo.jpg" type="image/jpeg" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="stylesheet" href="/assets/cms.css" />
   </head>
   <body class="cms-login-page">

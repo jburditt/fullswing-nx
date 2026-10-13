@@ -155,13 +155,12 @@ The sidecar JSON must use route `/page/<basename>`.
 
 ## To-Do
 
+- Deploy to blog.fullsweb.com
 - Add MCP server that can read public and private jburditt repo
 - Use the Markdown editor from Github Copilot app
 - Root route should redirect to dashboard
-- Redirect all pages to configuration if no provider found? Or wizard
 - Add image e.g. screenshot
 - Trigger Github action run by API
-- OAuth for CMS
 - Cleanup CMS UI and update spec docs
 - Update angular-blog readme and reference this repository
 - Add blocks with header e.g. https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli

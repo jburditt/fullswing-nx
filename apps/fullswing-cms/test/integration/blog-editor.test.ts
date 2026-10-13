@@ -112,6 +112,7 @@ test('editor renders split preview controls and loads the live preview client', 
   await app.close();
 
   assert.equal(response.statusCode, 200);
+  assert.match(response.body, /<link rel="icon" href="\/favicon\.png" type="image\/png" \/>/);
   assert.match(response.body, /class="cms-editor-split"/);
   assert.match(response.body, /data-markdown-preview/);
   assert.match(response.body, /src="\/assets\/cms\.js"/);
